@@ -558,6 +558,99 @@
       display: none !important;
     }
     
+    .upload-section {
+      background: var(--bg-card);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 1px solid var(--border-color);
+    }
+    
+    .upload-section h3 {
+      margin-bottom: 15px;
+      color: var(--accent);
+    }
+    
+    .drop-zone {
+      border: 2px dashed var(--border-color);
+      border-radius: 8px;
+      padding: 40px;
+      text-align: center;
+      background: var(--bg-secondary);
+      transition: all 0.3s;
+      cursor: pointer;
+      margin-bottom: 15px;
+    }
+    
+    .drop-zone:hover {
+      border-color: var(--accent);
+      background: var(--bg-card);
+    }
+    
+    .drop-zone.dragover {
+      border-color: var(--success);
+      background: var(--selected);
+      transform: scale(1.02);
+    }
+    
+    .drop-zone-icon {
+      font-size: 3rem;
+      margin-bottom: 10px;
+    }
+    
+    .drop-zone-text {
+      font-size: 1.1rem;
+      margin-bottom: 10px;
+      color: var(--text-primary);
+    }
+    
+    .drop-zone-hint {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+    
+    .paste-area {
+      margin-top: 15px;
+    }
+    
+    .paste-area textarea {
+      width: 100%;
+      min-height: 150px;
+      padding: 15px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      resize: vertical;
+    }
+    
+    .paste-area textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    
+    .upload-stats {
+      display: flex;
+      gap: 20px;
+      margin-top: 15px;
+      padding: 15px;
+      background: var(--bg-secondary);
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    
+    .upload-stats .stat {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .upload-stats .stat strong {
+      color: var(--accent);
+    }
+    
     @media (max-width: 1024px) {
       .main-layout {
         flex-direction: column;
@@ -654,6 +747,49 @@
           <li><strong>P:</strong> Edellinen kysymys</li>
           <li><strong>M:</strong> Merkitse tarkistettavaksi</li>
         </ul>
+      </div>
+    </section>
+
+    <section class="upload-section" id="upload-section">
+      <h3>📂 Lataa oma kysymyspankki (valinnainen)</h3>
+      
+      <div class="drop-zone" id="drop-zone">
+        <input type="file" id="file-input" accept=".json,.pdf" style="display: none;">
+        <div class="drop-zone-icon">📁</div>
+        <div class="drop-zone-text">Vedä ja pudota JSON tai PDF tiedosto tähän</div>
+        <div class="drop-zone-hint">tai klikkaa valitaksesi tiedoston</div>
+      </div>
+      
+      <div class="paste-area">
+        <label for="json-paste" style="display: block; margin-bottom: 8px; font-weight: 600;">
+          Tai liitä JSON-kysymyspankki tähän:
+        </label>
+        <textarea 
+          id="json-paste" 
+          placeholder='[{"id":"1","difficulty":"easy","stem":"Kysymys?","type":"single","options":[{"label":"A","text":"Vastaus","correct":true}],"rationale":"Selitys"}]'
+        ></textarea>
+        <button class="btn" onclick="loadFromPaste()" style="margin-top: 10px;">
+          📋 Lataa liitetty JSON
+        </button>
+      </div>
+      
+      <div class="upload-stats" id="upload-stats" style="display: none;">
+        <div class="stat">
+          <span>📊 Ladattu:</span>
+          <strong id="loaded-count">0 kysymystä</strong>
+        </div>
+        <div class="stat">
+          <span>📈 Easy:</span>
+          <strong id="loaded-easy">0</strong>
+        </div>
+        <div class="stat">
+          <span>📊 Medium:</span>
+          <strong id="loaded-medium">0</strong>
+        </div>
+        <div class="stat">
+          <span>📉 Hard:</span>
+          <strong id="loaded-hard">0</strong>
+        </div>
       </div>
     </section>
 
@@ -5260,6 +5396,136 @@
     let drillAnswers = {};
     
     // ============================================
+    // KYSYMYSPANKIN LATAUS
+    // ============================================
+    
+    function updateQuestionBank(newQuestions) {
+      if (!Array.isArray(newQuestions) || newQuestions.length === 0) {
+        alert('Virheellinen kysymyspankki. Tarkista että tiedosto sisältää kysymystaulukon.');
+        return false;
+      }
+      
+      // Validoi kysymykset
+      const validQuestions = newQuestions.filter(q => {
+        return q.id && q.difficulty && q.stem && q.type && 
+               Array.isArray(q.options) && q.options.length > 0 && q.rationale;
+      });
+      
+      if (validQuestions.length === 0) {
+        alert('Yksikään kysymys ei ole oikeassa formaatissa.');
+        return false;
+      }
+      
+      // Päivitä globaali kysymyspankki
+      QUESTION_BANK.length = 0;
+      QUESTION_BANK.push(...validQuestions);
+      
+      // Näytä tilastot
+      updateUploadStats();
+      
+      return true;
+    }
+    
+    function updateUploadStats() {
+      const easy = QUESTION_BANK.filter(q => q.difficulty === 'easy').length;
+      const medium = QUESTION_BANK.filter(q => q.difficulty === 'medium').length;
+      const hard = QUESTION_BANK.filter(q => q.difficulty === 'hard').length;
+      
+      document.getElementById('loaded-count').textContent = `${QUESTION_BANK.length} kysymystä`;
+      document.getElementById('loaded-easy').textContent = easy;
+      document.getElementById('loaded-medium').textContent = medium;
+      document.getElementById('loaded-hard').textContent = hard;
+      document.getElementById('upload-stats').style.display = 'flex';
+    }
+    
+    function loadFromPaste() {
+      const textarea = document.getElementById('json-paste');
+      const text = textarea.value.trim();
+      
+      if (!text) {
+        alert('Liitä JSON-kysymyspankki tekstikenttään.');
+        return;
+      }
+      
+      try {
+        const questions = JSON.parse(text);
+        if (updateQuestionBank(questions)) {
+          alert(`✅ Ladattu ${QUESTION_BANK.length} kysymystä!`);
+          textarea.value = '';
+        }
+      } catch (e) {
+        alert('Virheellinen JSON-muoto. Tarkista syntaksi.\\n\\n' + e.message);
+      }
+    }
+    
+    function loadFromFile(file) {
+      const reader = new FileReader();
+      
+      reader.onload = function(e) {
+        const content = e.target.result;
+        
+        if (file.name.endsWith('.json')) {
+          try {
+            const questions = JSON.parse(content);
+            if (updateQuestionBank(questions)) {
+              alert(`✅ Ladattu tiedostosta: ${QUESTION_BANK.length} kysymystä!`);
+            }
+          } catch (error) {
+            alert('Virhe JSON-tiedoston lukemisessa:\\n' + error.message);
+          }
+        } else if (file.name.endsWith('.pdf')) {
+          alert('PDF-tuki tulossa pian. Käytä toistaiseksi JSON-muotoa.');
+          // TODO: Lisää PDF-parsinta
+        }
+      };
+      
+      reader.onerror = function() {
+        alert('Virhe tiedoston lukemisessa.');
+      };
+      
+      reader.readAsText(file);
+    }
+    
+    // Drag & Drop -toiminnallisuus
+    function setupDragAndDrop() {
+      const dropZone = document.getElementById('drop-zone');
+      const fileInput = document.getElementById('file-input');
+      
+      // Klikkaus avaa tiedostovalitsimen
+      dropZone.addEventListener('click', () => {
+        fileInput.click();
+      });
+      
+      // Tiedoston valinta
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          loadFromFile(file);
+        }
+      });
+      
+      // Drag & Drop -eventit
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+      });
+      
+      dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+      });
+      
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        
+        const file = e.dataTransfer.files[0];
+        if (file) {
+          loadFromFile(file);
+        }
+      });
+    }
+    
+    // ============================================
     // SEEDED RNG
     // ============================================
     
@@ -6251,6 +6517,12 @@
         document.body.classList.add('dark-mode');
         document.getElementById('theme-toggle').textContent = '☀️';
       }
+      
+      // Setup drag & drop
+      setupDragAndDrop();
+      
+      // Show initial stats for default question bank
+      updateUploadStats();
       
       showStartScreen();
     });
