@@ -1,0 +1,6267 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Examinarium - Tenttisimulaattori</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8f9fa;
+      --bg-card: #ffffff;
+      --text-primary: #212529;
+      --text-secondary: #6c757d;
+      --border-color: #dee2e6;
+      --accent: #0d6efd;
+      --success: #198754;
+      --warning: #ffc107;
+      --danger: #dc3545;
+      --selected: #d1e7dd;
+      --selected-border: #198754;
+      --unanswered: #e9ecef;
+      --answered: #cfe2ff;
+      --flagged: #fff3cd;
+    }
+    
+    body.dark-mode {
+      --bg-primary: #1a1a1a;
+      --bg-secondary: #2d2d2d;
+      --bg-card: #242424;
+      --text-primary: #e9ecef;
+      --text-secondary: #adb5bd;
+      --border-color: #495057;
+      --unanswered: #343a40;
+      --answered: #1e3a5f;
+      --flagged: #5c4f1e;
+      --selected: #1e4d2b;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      line-height: 1.6;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    header {
+      background: var(--bg-card);
+      border-bottom: 2px solid var(--border-color);
+      padding: 15px 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .header-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    
+    .header-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    
+    .header-stats {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.95rem;
+    }
+    
+    .timer {
+      font-weight: 700;
+      font-size: 1.2rem;
+      color: var(--accent);
+      min-width: 80px;
+    }
+    
+    .timer.warning {
+      color: var(--warning);
+    }
+    
+    .timer.danger {
+      color: var(--danger);
+      animation: pulse 1s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    
+    .instructions {
+      background: var(--bg-card);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 1px solid var(--border-color);
+    }
+    
+    .instructions-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    
+    .instructions-header h2 {
+      font-size: 1.3rem;
+      color: var(--accent);
+    }
+    
+    .instructions-content {
+      margin-top: 15px;
+    }
+    
+    .instructions-content.collapsed {
+      display: none;
+    }
+    
+    .instructions ul {
+      margin-left: 20px;
+      margin-top: 10px;
+    }
+    
+    .instructions li {
+      margin: 8px 0;
+    }
+    
+    .formula {
+      background: var(--bg-secondary);
+      padding: 10px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      margin: 10px 0;
+    }
+    
+    .btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    
+    .btn:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+    
+    .btn:active {
+      transform: translateY(0);
+    }
+    
+    .btn-secondary {
+      background: var(--text-secondary);
+    }
+    
+    .btn-success {
+      background: var(--success);
+    }
+    
+    .btn-danger {
+      background: var(--danger);
+    }
+    
+    .btn-warning {
+      background: var(--warning);
+      color: #000;
+    }
+    
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .main-layout {
+      display: flex;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    
+    .question-panel {
+      flex: 1;
+      background: var(--bg-card);
+      border-radius: 8px;
+      padding: 30px;
+      border: 1px solid var(--border-color);
+    }
+    
+    .side-panel {
+      width: 280px;
+      background: var(--bg-card);
+      border-radius: 8px;
+      padding: 20px;
+      border: 1px solid var(--border-color);
+      align-self: flex-start;
+      position: sticky;
+      top: 90px;
+      max-height: calc(100vh - 110px);
+      overflow-y: auto;
+    }
+    
+    .side-panel h3 {
+      margin-bottom: 15px;
+      font-size: 1.1rem;
+    }
+    
+    .question-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+    }
+    
+    .question-number {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+      border: 2px solid transparent;
+    }
+    
+    .question-number.unanswered {
+      background: var(--unanswered);
+    }
+    
+    .question-number.answered {
+      background: var(--answered);
+      border-color: var(--accent);
+    }
+    
+    .question-number.flagged {
+      background: var(--flagged);
+      border-color: var(--warning);
+    }
+    
+    .question-number.current {
+      border-color: var(--accent);
+      border-width: 3px;
+      font-weight: 700;
+    }
+    
+    .question-number:hover {
+      transform: scale(1.1);
+    }
+    
+    .question-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid var(--border-color);
+    }
+    
+    .question-meta {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .badge {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    
+    .badge-easy {
+      background: #d4edda;
+      color: #155724;
+    }
+    
+    .badge-medium {
+      background: #fff3cd;
+      color: #856404;
+    }
+    
+    .badge-hard {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    
+    body.dark-mode .badge-easy {
+      background: #1e4d2b;
+      color: #a3cfbb;
+    }
+    
+    body.dark-mode .badge-medium {
+      background: #5c4f1e;
+      color: #f5e4a6;
+    }
+    
+    body.dark-mode .badge-hard {
+      background: #5c1f1f;
+      color: #f5c2c7;
+    }
+    
+    .question-stem {
+      font-size: 1.1rem;
+      margin-bottom: 25px;
+      line-height: 1.7;
+    }
+    
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .option {
+      position: relative;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      padding: 15px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--bg-card);
+    }
+    
+    .option:hover {
+      border-color: var(--accent);
+      background: var(--bg-secondary);
+    }
+    
+    .option.selected {
+      background: var(--selected);
+      border-color: var(--selected-border);
+    }
+    
+    .option.correct {
+      background: #d1e7dd;
+      border-color: var(--success);
+    }
+    
+    .option.incorrect {
+      background: #f8d7da;
+      border-color: var(--danger);
+    }
+    
+    .option input[type="radio"],
+    .option input[type="checkbox"] {
+      margin-right: 12px;
+    }
+    
+    .option-label {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+    }
+    
+    .option-text {
+      flex: 1;
+    }
+    
+    .navigation {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 30px;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+    
+    .nav-buttons {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .report {
+      background: var(--bg-card);
+      border-radius: 8px;
+      padding: 30px;
+      border: 1px solid var(--border-color);
+    }
+    
+    .report-header {
+      text-align: center;
+      padding-bottom: 20px;
+      border-bottom: 2px solid var(--border-color);
+      margin-bottom: 30px;
+    }
+    
+    .score-display {
+      font-size: 3rem;
+      font-weight: 700;
+      margin: 20px 0;
+    }
+    
+    .score-display.pass {
+      color: var(--success);
+    }
+    
+    .score-display.fail {
+      color: var(--danger);
+    }
+    
+    .score-breakdown {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin: 30px 0;
+    }
+    
+    .score-card {
+      background: var(--bg-secondary);
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    
+    .score-card h4 {
+      margin-bottom: 10px;
+      color: var(--text-secondary);
+    }
+    
+    .score-card .score {
+      font-size: 1.8rem;
+      font-weight: 700;
+    }
+    
+    .must-fix {
+      margin: 30px 0;
+    }
+    
+    .must-fix h3 {
+      margin-bottom: 15px;
+    }
+    
+    .must-fix-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .must-fix-item {
+      background: var(--bg-secondary);
+      padding: 15px;
+      border-radius: 8px;
+      border-left: 4px solid var(--danger);
+    }
+    
+    .mini-drills {
+      margin: 30px 0;
+    }
+    
+    .drill-question {
+      background: var(--bg-secondary);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      border: 1px solid var(--border-color);
+    }
+    
+    .drill-options {
+      margin-top: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .rationale {
+      margin-top: 15px;
+      padding: 15px;
+      background: var(--bg-secondary);
+      border-left: 4px solid var(--accent);
+      border-radius: 4px;
+    }
+    
+    .rationale h4 {
+      margin-bottom: 8px;
+      color: var(--accent);
+    }
+    
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    
+    .theme-toggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+      transition: all 0.3s;
+      z-index: 1000;
+    }
+    
+    .theme-toggle:hover {
+      transform: scale(1.1);
+    }
+    
+    .start-screen {
+      text-align: center;
+      background: var(--bg-card);
+      border-radius: 8px;
+      padding: 50px;
+      border: 1px solid var(--border-color);
+    }
+    
+    .start-screen h1 {
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+      color: var(--accent);
+    }
+    
+    .start-screen p {
+      font-size: 1.1rem;
+      margin-bottom: 30px;
+      color: var(--text-secondary);
+    }
+    
+    .hidden {
+      display: none !important;
+    }
+    
+    @media (max-width: 1024px) {
+      .main-layout {
+        flex-direction: column;
+      }
+      
+      .side-panel {
+        width: 100%;
+        position: static;
+        max-height: none;
+      }
+      
+      .question-grid {
+        grid-template-columns: repeat(10, 1fr);
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .header-content {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .header-stats {
+        justify-content: space-between;
+      }
+      
+      .question-panel {
+        padding: 20px;
+      }
+      
+      .question-grid {
+        grid-template-columns: repeat(5, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <div class="header-title">📚 Examinarium</div>
+      <div class="header-stats" id="header-stats">
+        <div class="stat-item">
+          <span>⏱️</span>
+          <span class="timer" id="timer">115:00</span>
+        </div>
+        <div class="stat-item">
+          <span>📝</span>
+          <span id="answered-count">0 / 50</span>
+        </div>
+        <button class="btn btn-success hidden" id="finish-btn" onclick="finishExam()">Lopeta & tarkista</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <section class="instructions" id="instructions">
+      <div class="instructions-header" onclick="toggleInstructions()">
+        <h2>📋 Ohjeet</h2>
+        <span id="instructions-toggle">▼</span>
+      </div>
+      <div class="instructions-content" id="instructions-content">
+        <h3>Kysymystyypit</h3>
+        <ul>
+          <li><strong>4 vaihtoehtoa (A-D):</strong> Valitse yksi oikea vastaus</li>
+          <li><strong>5 vaihtoehtoa (A-E):</strong> Valitse kaikki oikeat vastaukset (1-4 voi olla oikein)</li>
+        </ul>
+        
+        <h3>Pisteytys</h3>
+        <div class="formula">
+          Oikea valinta: +1 / (oikeiden määrä)<br>
+          Väärä valinta: -1 / (väärien määrä)<br>
+          Tyhjä: 0 pistettä<br>
+          Minimi per kysymys: 0 pistettä (ei negatiivisia)
+        </div>
+        
+        <h3>Läpäisyvaatimus</h3>
+        <p><strong>51% eli vähintään 25.5 / 50 pistettä</strong></p>
+        
+        <h3>Aikaraja</h3>
+        <p><strong>115 minuuttia</strong> koko kokeelle</p>
+        
+        <h3>Vinkit</h3>
+        <ul>
+          <li>Älä rastita 5-vaihtoehtoisia kysymyksiä arvausmielessä - väärät valinnat vähentävät pisteitä!</li>
+          <li>Käytä "Merkitse tarkistettavaksi" -toimintoa epävarmoissa kysymyksissä</li>
+          <li>Jaa aikasi: ~1-1.5 min per easy, ~2 min per medium, ~3 min per hard</li>
+          <li>Sivun päivitys ei nollaa koetta - edistyminen tallennetaan automaattisesti</li>
+        </ul>
+        
+        <h3>Näppäimistökomennot</h3>
+        <ul>
+          <li><strong>1-5:</strong> Valitse vaihtoehto A-E</li>
+          <li><strong>N:</strong> Seuraava kysymys</li>
+          <li><strong>P:</strong> Edellinen kysymys</li>
+          <li><strong>M:</strong> Merkitse tarkistettavaksi</li>
+        </ul>
+      </div>
+    </section>
+
+    <div id="app">
+      <!-- Dynaaminen sisältö tähän -->
+    </div>
+  </div>
+
+  <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Vaihda teemaa">
+    🌙
+  </button>
+
+  <script>
+    // ============================================
+    // KYSYMYSPOOLI - LISÄÄ TÄHÄN OMA PANKKI
+    // ============================================
+    
+    const QUESTION_BANK = [
+  {
+    "id": "b82ca321-d750-4f2e-9499-0a5fe06eec9c",
+    "difficulty": "easy",
+    "stem": "Mikä on ACE-estäjien tyypillinen haitta, joka liittyy bradykiniinin kertymiseen?",
+    "type": "single",
+    "tags": [
+      "RAAS",
+      "ACE"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Ototoksisuus",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Hyperurikemia",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Kuiva yskä",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Ripuli",
+        "correct": false
+      }
+    ],
+    "rationale": "ACE-estäjät estävät bradykiniinin hajoamista → yskä/angioedeema mahdollisia."
+  },
+  {
+    "id": "6909f8d9-6b82-457e-9fca-407d4bfecb80",
+    "difficulty": "medium",
+    "stem": "AT1-reseptorin salpaajien (ARB) ja ACE-estäjien yhdistäminen sydämen vajaatoiminnassa on yleensä:",
+    "type": "single",
+    "tags": [
+      "RAAS",
+      "ARB",
+      "HF"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Ensisijainen yhdistelmä",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Pakollinen, jos EF < 30 %",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Vähentää hyperkalemiariskiä",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Ei suositeltavaa haittojen lisääntymisen vuoksi",
+        "correct": true
+      }
+    ],
+    "rationale": "Yhdistelmä lisää hypotension, munuaishaitan ja hyperkalemian riskiä."
+  },
+  {
+    "id": "d4cd4714-a715-4c1e-ae62-d7055fad1505",
+    "difficulty": "easy",
+    "stem": "Beetasalpaajien verenpainetta alentava vaikutus pitkällä aikavälillä liittyy ennen kaikkea:",
+    "type": "single",
+    "tags": [
+      "BB",
+      "HTN"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Reniinin nousuun",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Kalsiumkanavien blokkiin suoraan verisuonissa",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Plasmatilavuuden kasvuun",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Minuuttitilavuuden ja sympaattisen aktiviteetin pienenemiseen",
+        "correct": true
+      }
+    ],
+    "rationale": "Aluksi CO ↓, myöhemmin perifeerinen vastus pienenee neurohumoraalisten vaikutusten kautta."
+  },
+  {
+    "id": "d35336c9-1f42-4840-a8f6-209a9fad17a9",
+    "difficulty": "medium",
+    "stem": "Mikä beetasalpaaja on β1-selektiivinen ja soveltuu usein sydämen vajaatoiminnan hoitoon?",
+    "type": "single",
+    "tags": [
+      "BB",
+      "HF"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Propranololi",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Bisoprololi",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Sotaloli",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Pindololi",
+        "correct": false
+      }
+    ],
+    "rationale": "Bisoprololi, metoprololi ja karvediloli ovat HF-näyttöön perustuvia vaihtoehtoja."
+  },
+  {
+    "id": "4b288c46-8e51-42bb-84f6-903831d30989",
+    "difficulty": "easy",
+    "stem": "ACE-estäjille tyypillinen laboratorioarvon muutos on:",
+    "type": "single",
+    "tags": [
+      "RAAS",
+      "Lab"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Kaliumin nousu",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "Magnesiumin lasku",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Kalsiumin lasku",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Natriumin nousu",
+        "correct": false
+      }
+    ],
+    "rationale": "RAAS-estäjät voivat nostaa K+-arvoja → hyperkalemiariski."
+  },
+  {
+    "id": "6d3a2167-9044-40a7-8c68-8dbe21599ba0",
+    "difficulty": "medium",
+    "stem": "ARNI-hoidossa (sakubitriili/valsartaani) neprilysiinin eston kliininen tavoite on:",
+    "type": "single",
+    "tags": [
+      "RAAS",
+      "ARNI",
+      "HF"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Lisätä angiotensiini II:n muodostusta",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Estää SGLT2-kuljetinta",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Lisätä natriureettisten peptidien vaikutusta",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Vähentää bradykiniinin määrää",
+        "correct": false
+      }
+    ],
+    "rationale": "Neprilysiini hajottaa natriureettisia peptidejä; sen esto voimistaa vasodilataatiota/diureesia."
+  },
+  {
+    "id": "30287a7d-030d-4088-bf02-116e0db27d49",
+    "difficulty": "easy",
+    "stem": "Tiatsididiureettien primaarinen vaikutuskohde on:",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Tiatsidi"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Hiilihappoanhydraasi proksimaalisessa tubuluksessa",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Na-K-2Cl-symportteri Henlen paksussa nousevassa osassa",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Na/Cl-symportteri distaalisessa tubuluksessa",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Na/K-ATPaasi keräystiehyeessä",
+        "correct": false
+      }
+    ],
+    "rationale": "Tiatsidit estävät NCC-kuljetinta distaalisessa tubuluksessa."
+  },
+  {
+    "id": "d60744f4-a50c-41ef-a30e-0452eb8d7512",
+    "difficulty": "easy",
+    "stem": "Loop-diureeteille tyypillinen elektrolyyttivaikutus on:",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Hyperkalsemia",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Hypokalsemia",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Hyperkalemia",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Hyponatremia ei muutu",
+        "correct": false
+      }
+    ],
+    "rationale": "Na-K-2Cl-estolla myös Ca2+ ja Mg2+ erittyminen lisääntyy."
+  },
+  {
+    "id": "5753d4fd-3686-4b14-a04a-c271f687a5dc",
+    "difficulty": "easy",
+    "stem": "Dihydropyridiinityypin kalsiumkanavasalpaajien (esim. amlodipiini) päävaikutus verenpaineessa on:",
+    "type": "single",
+    "tags": [
+      "CCB",
+      "HTN"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Selvä negatiivinen inotropia",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Perifeerinen vasodilataatio",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Natriumin erityksen lisääminen",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "RAAS-eston lisääminen",
+        "correct": false
+      }
+    ],
+    "rationale": "DHP-CCB vaikuttaa pääosin valtimoihin."
+  },
+  {
+    "id": "6f7a2eb9-3770-4488-ad7b-90e3da03ee91",
+    "difficulty": "medium",
+    "stem": "Mikä haitta on tavallisempi DHP-CCB-lääkityksellä?",
+    "type": "single",
+    "tags": [
+      "CCB",
+      "AE"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Hypokalemia",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Nilkkaturvotus",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Keuhkofibroosi",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Ototoksisuus",
+        "correct": false
+      }
+    ],
+    "rationale": "Arteriolaarinen dilataatio lisää kapillaaripaineita → perifeerinen turvotus."
+  },
+  {
+    "id": "0d55145d-362c-4ea9-9e94-742282f1cf35",
+    "difficulty": "easy",
+    "stem": "ASA:n antitromboottinen vaikutus perustuu pääosin:",
+    "type": "single",
+    "tags": [
+      "Antitrombootti",
+      "ASA"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "COX-1:n irreversiibeliin estoon verihiutaleissa",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "P2Y12-reseptorin salpaukseen",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "COX-2-valikoivaan estoon",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Antitrombiinin aktivointiin",
+        "correct": false
+      }
+    ],
+    "rationale": "Tromboksaani A2 -synteesi estyy verihiutaleiden eliniän ajaksi."
+  },
+  {
+    "id": "f916ee41-55cb-4174-966b-8ead4e7d6c7b",
+    "difficulty": "easy",
+    "stem": "Mikä seuraavista on P2Y12-salpaaja?",
+    "type": "single",
+    "tags": [
+      "Antitrombootti",
+      "P2Y12"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Tikagrelori",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "Abciksimabi",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Asenokumaroli",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Apiksabaani",
+        "correct": false
+      }
+    ],
+    "rationale": "Tikagrelori on reversiibeli P2Y12-estäjä."
+  },
+  {
+    "id": "b8c954dc-79d5-4442-a1f4-b9ced01dfb65",
+    "difficulty": "medium",
+    "stem": "Varfariinin vaikutuskohde on:",
+    "type": "single",
+    "tags": [
+      "Antitrombootti",
+      "Varfariini"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "GPIIb/IIIa-reseptorin esto",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "K-vitamiinista riippuvaisten hyytymistekijöiden γ-karboksylaatio maksassa",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Fibrinolyysin tehostus",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Trombiinin suora esto",
+        "correct": false
+      }
+    ],
+    "rationale": "Estää tekijöiden II, VII, IX, X sekä proteiinien C ja S aktivoitumista."
+  },
+  {
+    "id": "6e85731b-3f16-48a9-b2e9-d788c263007a",
+    "difficulty": "medium",
+    "stem": "GPIIb/IIIa-estäjät (esim. abciksimabi) käytetään useimmiten:",
+    "type": "single",
+    "tags": [
+      "Antitrombootti",
+      "PCI"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Syvän laskimotromboosin kotihoidossa",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Pitkäaikaiseen sekundaaripreventioon avohoidossa",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Invasiivisten kardiologisten toimenpiteiden yhteydessä",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Aivoinfarktin perushoitona",
+        "correct": false
+      }
+    ],
+    "rationale": "Tehokkaita, mutta verenvuotoriski → käyttö katetritoimenpiteiden yhteydessä."
+  },
+  {
+    "id": "3dfbf35e-d82d-4238-bfb0-e7e03f09b27c",
+    "difficulty": "medium",
+    "stem": "DOAC-lääkkeistä suora trombiinin estäjä on:",
+    "type": "single",
+    "tags": [
+      "Antitrombootti",
+      "DOAC"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Dabigatraani",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "Rivaroksabaani",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Apiksabaani",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Warfarin",
+        "correct": false
+      }
+    ],
+    "rationale": "Dabigatraani = suora IIa-estäjä; riva/apiksa = suorat Xa-estäjät."
+  },
+  {
+    "id": "2984bdf4-a1ea-4288-9042-a70eb0463d4e",
+    "difficulty": "easy",
+    "stem": "Statiinin ensisijainen vaikutusmekanismi on:",
+    "type": "single",
+    "tags": [
+      "Lipidit",
+      "Statiini"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "HMG-CoA-reduktaasin esto",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "CETP:n esto",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "NPC1L1-kuljettajan esto",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "PCSK9:n neutralointi",
+        "correct": false
+      }
+    ],
+    "rationale": "Kolesterolisynteesin esto lisää LDL-reseptoreita ja alentaa LDL:ää."
+  },
+  {
+    "id": "2a386ee3-ac5e-40ec-99c9-dec81404901c",
+    "difficulty": "easy",
+    "stem": "Etsetimibi alentaa LDL:ää estämällä:",
+    "type": "single",
+    "tags": [
+      "Lipidit",
+      "Ezetimibi"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "HMG-CoA-reduktaasia",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Sappihappojen synteesiä",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "NPC1L1-välitteistä kolesterolin imeytymistä suolistosta",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "PCSK9:ää",
+        "correct": false
+      }
+    ],
+    "rationale": "Imeytymisen esto → maksa ottaa enemmän LDL:ää verestä."
+  },
+  {
+    "id": "e4352b51-5612-412d-9839-383e1db046ff",
+    "difficulty": "medium",
+    "stem": "PCSK9-vasta-aineiden päätavoite on:",
+    "type": "single",
+    "tags": [
+      "Lipidit",
+      "PCSK9"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Lisätä kolesterolisynteesiä maksassa",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Estää triglyseridien imeytyminen",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Lisätä CETP-aktiivisuutta",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Lisätä LDL-reseptorien määrää hepatosyyttien pinnalla",
+        "correct": true
+      }
+    ],
+    "rationale": "PCSK9 edistää LDLR:n hajoamista; sen esto lisää reseptoripintaa."
+  },
+  {
+    "id": "74cebee7-f49d-4688-b6d2-ce919517ed3f",
+    "difficulty": "medium",
+    "stem": "Statiinihoidon lihashaittariski kasvaa erityisesti, kun… (valitse kaikki oikeat)",
+    "type": "multi",
+    "tags": [
+      "Lipidit",
+      "AE",
+      "Interaktiot"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Vesi lisää riskiä",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Samanaikainen vahva CYP3A4-estäjä on käytössä",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Annos on suuri",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Käyttö yhdessä etsetimibin kanssa aina moninkertaistaa lihasriskin",
+        "correct": false
+      },
+      {
+        "label": "E",
+        "text": "Potilaalla on SLCO1B1-variantti",
+        "correct": true
+      }
+    ],
+    "rationale": "Suurannos, vahvat CYP3A4-estäjät (simvastatiini/lovastatiini) ja SLCO1B1-variantti lisäävät riskiä."
+  },
+  {
+    "id": "d7e3a588-2b6e-47de-9d6f-d4e5ab099a42",
+    "difficulty": "easy",
+    "stem": "SGLT2-estäjien hyöty sydämen vajaatoiminnassa (myös ilman diabetesta) näkyy erityisesti:",
+    "type": "single",
+    "tags": [
+      "HF",
+      "SGLT2"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Välittömänä EF-hyppynä",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Sairaalahoitojen vähenemisenä",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Verensokerin nousuna",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Kammioarytmioiden lisääntymisenä",
+        "correct": false
+      }
+    ],
+    "rationale": "Laaja näyttö HFrEF/HFpEF: hospitalisaatiot ↓, oireet paranevat."
+  },
+  {
+    "id": "db666215-f117-4cd5-a20d-f7a85e15d171",
+    "difficulty": "easy",
+    "stem": "Orgaaniset nitraatit lievittävät iskemiaa ensisijaisesti:",
+    "type": "single",
+    "tags": [
+      "CAD",
+      "Nitraatit"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Nostamalla EF:ää välittömästi",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Laskemalla LDL-arvoa",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Pienentämällä esikuormitusta (laskimodilataatio)",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Lisäämällä hyytymistaipumusta",
+        "correct": false
+      }
+    ],
+    "rationale": "Esikuorma ↓ → seinämäkuorma ja O₂-tarve ↓."
+  },
+  {
+    "id": "aa78095e-21b4-42b0-926c-ea2d90988b81",
+    "difficulty": "medium",
+    "stem": "Nitraattitoleranssin ehkäisyyn suositellaan… (valitse kaikki oikeat)",
+    "type": "multi",
+    "tags": [
+      "CAD",
+      "Nitraatit",
+      "Toleranssi"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Sublinguaalinen käyttö vain oireeseen, ei jatkuvasti",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "PDE5-estäjän lisäämistä",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Laastarin yhtäjaksoista 24/7-käyttöä",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Vuorokaudessa 8–12 tunnin nitraattivapaata jaksoa",
+        "correct": true
+      },
+      {
+        "label": "E",
+        "text": "Annoksen jatkuvaa nostoa ilman taukoja",
+        "correct": false
+      }
+    ],
+    "rationale": "Tauko vähentää toleranssia; jatkuva ylläpito nostaa riskiä."
+  },
+  {
+    "id": "6922d1ee-e87a-4821-9d9e-d5bbfd170632",
+    "difficulty": "easy",
+    "stem": "Nitraatit ja PDE5-estäjät yhdessä:",
+    "type": "single",
+    "tags": [
+      "CAD",
+      "Interaktiot"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Voivat aiheuttaa hengenvaarallisen hypotension",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "Ovat turvallinen yhdistelmä, jos syke on matala",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Parantavat perfuusiota ilman verenpainevaikutusta",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Vähentävät toleranssia",
+        "correct": false
+      }
+    ],
+    "rationale": "Molemmat lisäävät NO/cGMP-vaikutusta → voimakas hypotensio."
+  },
+  {
+    "id": "bd914c40-dd72-4bc8-854c-41984fc08d31",
+    "difficulty": "medium",
+    "stem": "Beetasalpaajaa aloitettaessa HFrEF-potilaalla EF yleensä:",
+    "type": "single",
+    "tags": [
+      "HF",
+      "BB"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Nousee heti merkittävästi",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Voi aluksi hieman laskea ja nousee kuukausissa",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Ei muutu koskaan",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Laskee pysyvästi",
+        "correct": false
+      }
+    ],
+    "rationale": "Alkuvaiheessa neg. inotrooppinen vaikutus, myöhemmin käännyttävä hyöty."
+  },
+  {
+    "id": "06546bab-7c9c-4088-a965-e946a4a90023",
+    "difficulty": "medium",
+    "stem": "Eteisvärinän hoidon peruspilarit ovat… (valitse kaikki oikeat)",
+    "type": "multi",
+    "tags": [
+      "AF",
+      "Rytmihäiriö"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Hoito on tarpeeton jos oireet lieviä",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Lääkkeellinen hoito on aina parempi kuin katetriablaatio",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Rytmin tai sykkeen hallinta",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Tromboembolian ehkäisy (antikoagulaatio riskin mukaan)",
+        "correct": true
+      },
+      {
+        "label": "E",
+        "text": "QT-ajan lyhentäminen lääkityksellä",
+        "correct": false
+      }
+    ],
+    "rationale": "Tavoitteet: oireiden hallinta (rhythm/rate) + tromboosipreventio CHA₂DS₂-VASc mukaan."
+  },
+  {
+    "id": "5ae9dafb-df47-4d60-aff8-03a230ec18d4",
+    "difficulty": "hard",
+    "stem": "Dofetilidi ja sotaloli pidentävät QT-aikaa pääasiassa estämällä:",
+    "type": "single",
+    "tags": [
+      "AF",
+      "Farmakologia"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "K⁺-virtoja (IKr)",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "L-tyypin Ca²⁺-kanavaa",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "If-virtaa",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Na⁺-kanavaa pysyvästi",
+        "correct": false
+      }
+    ],
+    "rationale": "Luokan III antiarytmit pidentävät repolarisaatiota pääosin IKr-estolla."
+  },
+  {
+    "id": "b4025793-9465-444d-9ca7-db8cc9a899d5",
+    "difficulty": "easy",
+    "stem": "Mikä on tavallista eteisvärinässä iän suhteen?",
+    "type": "single",
+    "tags": [
+      "AF",
+      "Epidemiologia"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Huippu 30–45 v",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Yleisin <30-vuotiailla",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Esiintyvyys kasvaa selvästi > 65 vuoden iässä",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Vähenee iän myötä",
+        "correct": false
+      }
+    ],
+    "rationale": "Ikä on merkittävä riskitekijä AF:lle."
+  },
+  {
+    "id": "f05932bb-c90b-48dd-8b57-1e8b6b3893ca",
+    "difficulty": "easy",
+    "stem": "Suun kautta annetun raudan imeytymistä parantaa:",
+    "type": "single",
+    "tags": [
+      "Anemia",
+      "Rauta"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Runsas maitotuote aterialla",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Askorbiinihappo",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Kalsiumlisä",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Antasidit",
+        "correct": false
+      }
+    ],
+    "rationale": "C-vitamiini pelkistää Fe³⁺ → Fe²⁺ ja parantaa imeytymistä."
+  },
+  {
+    "id": "5bb63153-de02-4f7a-bfa6-e6450d7f8fb1",
+    "difficulty": "medium",
+    "stem": "B12- ja folaattipuutteen tunnuspiirteitä ovat… (valitse kaikki oikeat)",
+    "type": "multi",
+    "tags": [
+      "Anemia",
+      "B12",
+      "Folaatti"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Rautaa kertyy pernaan → mikrocytoosi",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Mikrosytoosi on tyypillistä B12-puutteessa",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "B12 imeytyy intrinsic factorin avulla",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Folaatti aiheuttaa aina neurologisia oireita",
+        "correct": false
+      },
+      {
+        "label": "E",
+        "text": "Makrosytoosi",
+        "correct": true
+      }
+    ],
+    "rationale": "B12/folaatin puute → makrosytoosi; B12 tarvitsee IF:n."
+  },
+  {
+    "id": "31eea7fb-09c1-406a-958f-2924c22b73af",
+    "difficulty": "easy",
+    "stem": "ACE-estäjä aiheuttaa yskää todennäköisimmin seuraavista lääkkeistä",
+    "type": "single",
+    "tags": [
+      "RAAS",
+      "ACE"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Amlodipiini",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Enalapriili",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Furosemidi",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Losartaani",
+        "correct": false
+      }
+    ],
+    "rationale": "ACE-estäjät lisäävät bradykiniiniä."
+  },
+  {
+    "id": "40013bab-c357-4011-96c6-94ddb628b215",
+    "difficulty": "easy",
+    "stem": "ARB-lääkkeistä esimerkki on",
+    "type": "single",
+    "tags": [
+      "RAAS",
+      "ARB"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Bisoprololi",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Kandesartaani",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Asetyylisalisyylihappo",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Enalapriili",
+        "correct": false
+      }
+    ],
+    "rationale": "AT1-salpaaja."
+  },
+  {
+    "id": "f37cb547-f999-4c0d-b964-f6f456a96359",
+    "difficulty": "easy",
+    "stem": "Loop-diureetti-esimerkki on",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Spironolaktoni",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Hydroklooritiatsidi",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Amiloridi",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Furosemidi",
+        "correct": true
+      }
+    ],
+    "rationale": "Henlen lingon NKCC-estäjä."
+  },
+  {
+    "id": "6823c4d5-ff7a-410a-8fc8-9cf0c0e581a8",
+    "difficulty": "medium",
+    "stem": "Kaliumia säästävä diureetti, joka on aldosteroniantagonisti",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "K-säästävä"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Metolatsoni",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Hydroklooritiatsidi",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Furosemidi",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Spironolaktoni",
+        "correct": true
+      }
+    ],
+    "rationale": "Antagonoi mineraalikortikoidireseptoria."
+  },
+  {
+    "id": "a35f9313-bffc-4088-9a78-1731fb219517",
+    "difficulty": "easy",
+    "stem": "DHP-CCB esimerkki",
+    "type": "single",
+    "tags": [
+      "CCB"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Metoprololi",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Verapamiili",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Amlodipiini",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Diltiatseemi",
+        "correct": false
+      }
+    ],
+    "rationale": "DHP-ryhmä vaikuttaa pääasiassa valtimoihin."
+  },
+  {
+    "id": "b87710f9-826d-4a0a-b3fd-ddb70745f91b",
+    "difficulty": "easy",
+    "stem": "Varfariinin monitorointiparametri on",
+    "type": "single",
+    "tags": [
+      "Antitrombootti",
+      "Warfarin"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Trombiiniaika",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "aPTT",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Anti-Xa",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "INR",
+        "correct": true
+      }
+    ],
+    "rationale": "Kapea terapeuttinen leveys → INR-seuranta."
+  },
+  {
+    "id": "d323f7e3-c1ba-4238-b352-a70205d9a2b2",
+    "difficulty": "easy",
+    "stem": "Suora Xa-estäjä on",
+    "type": "single",
+    "tags": [
+      "DOAC"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Dabigatraani",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Hepariini",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Varfariini",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Apiksabaani",
+        "correct": true
+      }
+    ],
+    "rationale": "Apiksabaani ja rivaroksabaani estävät Xa:ta."
+  },
+  {
+    "id": "e0b5c3fc-f31b-4668-be14-c7499ab75deb",
+    "difficulty": "medium",
+    "stem": "GPIIb/IIIa-estäjä",
+    "type": "single",
+    "tags": [
+      "Antitrombootti"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Prasugreeli",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Tikagrelori",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Klopidogreeli",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Abciksimabi",
+        "correct": true
+      }
+    ],
+    "rationale": "Iv. toimenpiteisiin."
+  },
+  {
+    "id": "ec45974f-ad62-4fd4-bc72-a7f57b246322",
+    "difficulty": "medium",
+    "stem": "Statiinin tyypillinen haitta",
+    "type": "single",
+    "tags": [
+      "Lipidit",
+      "AE"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Hyperurikemia",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Ototoksisuus",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Bronkospasmi",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Myopatia",
+        "correct": true
+      }
+    ],
+    "rationale": "Lihasoireet, harvoin rabdomyolyysi."
+  },
+  {
+    "id": "f1674e84-e2a0-477a-bc7b-090f47ce2a8e",
+    "difficulty": "medium",
+    "stem": "Etsetimibi soveltuu yhdistettäväksi statiiniin koska",
+    "type": "single",
+    "tags": [
+      "Lipidit"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Korvaa statiinien tarpeen kaikilla",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Laskee LDL:ää eri mekanismilla",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Nostaa HDL:ää voimakkaasti",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Estää statiinin lihashaitat varmasti",
+        "correct": false
+      }
+    ],
+    "rationale": "Imeytymisen esto + synteesin esto."
+  },
+  {
+    "id": "c8d1d619-5f7b-4287-96fd-1e0965c2a177",
+    "difficulty": "easy",
+    "stem": "PCSK9-estäjät annostellaan",
+    "type": "single",
+    "tags": [
+      "Lipidit",
+      "PCSK9"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Suunkautta tabletteina",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Transdermaalisesti",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Iv. infuusiona sairaalassa aina",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Ihonalaisina pistoksina",
+        "correct": true
+      }
+    ],
+    "rationale": "Monoklonaaliset vasta-aineet s.c."
+  },
+  {
+    "id": "82ab4bda-f056-4c24-941f-eaf8ea87a9b6",
+    "difficulty": "easy",
+    "stem": "SGLT2-estäjäesimerkki",
+    "type": "single",
+    "tags": [
+      "HF",
+      "DM"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Dapagliflotsiini",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "Metformiini",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Sitagliptiini",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Insuliini glargiini",
+        "correct": false
+      }
+    ],
+    "rationale": "HF-hyödyt riippumatta diabeteksesta."
+  },
+  {
+    "id": "c723a358-de8a-402a-b0e1-f1402e1ecff3",
+    "difficulty": "easy",
+    "stem": "Nitraattien tyypillinen akuutti haitta",
+    "type": "single",
+    "tags": [
+      "CAD",
+      "AE"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Ototoksisuus",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Päänsärky",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Hypoglykemia",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Hyperkalsemia",
+        "correct": false
+      }
+    ],
+    "rationale": "Vasodilataatio → päänsärky, hypotensio."
+  },
+  {
+    "id": "dd382e3e-5abb-47d3-91ab-9c5ba0a545f1",
+    "difficulty": "medium",
+    "stem": "Beetasalpaajaa ei pidä lopettaa äkillisesti, koska",
+    "type": "single",
+    "tags": [
+      "BB",
+      "Safety"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "QT pitenee voimakkaasti",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Rebound-takykardia ja iskemia voivat pahentua",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Trombosyyttien aggregaatio lisääntyy",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Hyperkalemia pahenee",
+        "correct": false
+      }
+    ],
+    "rationale": "Adrenergisten reseptorien regulaatio."
+  },
+  {
+    "id": "19176884-c2cc-46c1-b820-32dcfd33b389",
+    "difficulty": "medium",
+    "stem": "HF:n perushoidon kulmakivet",
+    "type": "single",
+    "tags": [
+      "HF"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Vain diureetti tarvitaan",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Vain rytmihäiriölääke",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "RAAS-estäjä/ARNI + beetasalpaaja + SGLT2 ± mineralokortikoidiantagonisti",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Vain nitraatit ja verapamiili",
+        "correct": false
+      }
+    ],
+    "rationale": "HFrEF: monihoito parantaa ennustetta."
+  },
+  {
+    "id": "73480241-a71a-43b7-947e-f96a1af3a15d",
+    "difficulty": "medium",
+    "stem": "Tiatsidien aineenvaihduntavaikutuksia ovat… (valitse kaikki oikeat)",
+    "type": "multi",
+    "tags": [
+      "Diureetit",
+      "Metabolia"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Hyperurikemia",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "Hyperglykemia mahdollinen",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Hyperkalemia on tyypillinen",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Hypokalsemia on tyypillinen",
+        "correct": false
+      },
+      {
+        "label": "E",
+        "text": "Hyponatremia",
+        "correct": true
+      }
+    ],
+    "rationale": "Tiatsidit voivat nostaa uraattia/glukoosia, laskea Na+, usein Ca2+ säästyy."
+  },
+  {
+    "id": "840adac2-3542-48ec-b25c-fdbd261a0258",
+    "difficulty": "medium",
+    "stem": "Hepariinin vaikutusmekanismi käsittää… (valitse kaikki oikeat)",
+    "type": "multi",
+    "tags": [
+      "Antitrombootti",
+      "Hepariini"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "P2Y12-eston",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Antitrombiinin aktivoinnin",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "COX-1:n eston",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Trombiinin ja/tai Xa:n inhibitiota",
+        "correct": true
+      },
+      {
+        "label": "E",
+        "text": "γ-karboksylaation eston maksassa",
+        "correct": false
+      }
+    ],
+    "rationale": "Hepariini tehostaa antitrombiinin aktiivisuutta trombiinia ja Xa:ta vastaan."
+  },
+  {
+    "id": "3643936d-da84-417f-ac55-2ccf6f4dd934",
+    "difficulty": "hard",
+    "stem": "Eteisvärinän riskipisteiden arvioinnissa (CHA₂DS₂-VASc) pisteitä tulee… (valitse kaikki oikeat)",
+    "type": "multi",
+    "tags": [
+      "AF",
+      "Riskipisteet"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Sydämen vajaatoiminta",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "Ikä ≥75 v",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Astman vaikeusasteesta",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Miesten sukupuolesta 2 pistettä",
+        "correct": false
+      },
+      {
+        "label": "E",
+        "text": "Aiempi aivoverenkiertohäiriö/TIA",
+        "correct": true
+      }
+    ],
+    "rationale": "CHA₂DS₂-VASc: Congestive HF, Hypertension, Age ≥75 (2), Diabetes, Stroke/TIA (2), Vascular disease, Age 65–74, Sex category (female)."
+  },
+  {
+    "id": "d905fadb-d209-424a-a992-eb99c3719efd",
+    "difficulty": "medium",
+    "stem": "DOAC-lääkkeiden etuja varfariiniin verrattuna ovat… (valitse kaikki oikeat)",
+    "type": "multi",
+    "tags": [
+      "DOAC",
+      "Vertailu"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Vähemmän kallonsisäisiä verenvuotoja",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "Aina parempi teho kuin varfariinilla kaikissa käyttöaiheissa",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Ei rutiini-INR-seurantaa",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Raskaudessa turvallisempi",
+        "correct": false
+      },
+      {
+        "label": "E",
+        "text": "Täysin riskitön yhdistelmä kaikissa munuaisfunktioissa",
+        "correct": false
+      }
+    ],
+    "rationale": "DOAC: vähemmän ICH, helppo annostus; ei sovi kaikkiin tilanteisiin (mekaaninen läppä, raskaus)."
+  },
+  {
+    "id": "4b5fd50f-0174-4e16-88c5-2881ff5de9a7",
+    "difficulty": "hard",
+    "stem": "ACE-estäjien kontraindikaatio raskauden aikana perustuu",
+    "type": "single",
+    "tags": [
+      "RAAS",
+      "Pregnancy"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Keuhkofibroosiin",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Teratogeenisuuteen ja munuaiskehityshaittaan",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Hypoglykemiariskiin",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "QT-ajan pitenemiseen",
+        "correct": false
+      }
+    ],
+    "rationale": "RAAS-estäjät ovat raskaudessa vasta-aiheisia."
+  },
+  {
+    "id": "e89844e4-0c57-4e36-a5a3-a6bed92d45c0",
+    "difficulty": "medium",
+    "stem": "Spironolaktoni voi aiheuttaa",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "AE"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Pysyviä kuulovaurioita",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Hypokalsemiaa",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Neutropeniaa on yleinen",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Hyperkalemiaa",
+        "correct": true
+      }
+    ],
+    "rationale": "K-säästävä diureetti → hyperkalemiariski."
+  },
+  {
+    "id": "9de9d040-2d57-4fd1-b6a3-b8b6783d2637",
+    "difficulty": "easy",
+    "stem": "Verapamiili kuuluu",
+    "type": "single",
+    "tags": [
+      "CCB"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "DHP-ryhmään",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Nitraatteihin",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Ei-dihydropyridiini-CCB-ryhmään",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "ACE-estäjiin",
+        "correct": false
+      }
+    ],
+    "rationale": "Verapamiili/Diltiatseemi = non-DHP."
+  },
+  {
+    "id": "78006bb0-4b74-4a7a-a4e7-76a3b5e9045b",
+    "difficulty": "hard",
+    "stem": "Klopidogreelin teho voi heiketä",
+    "type": "single",
+    "tags": [
+      "P2Y12",
+      "Farmakogenetiikka"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "SLCO1B1-variantin vuoksi",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "CYP2C19 loss-of-function -variantin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "VKORC1-variantin vuoksi",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "CYP1A2 polymorfian vuoksi",
+        "correct": false
+      }
+    ],
+    "rationale": "Klopidogreeli on aihiolääke; CYP2C19 aktivoi."
+  },
+  {
+    "id": "1667cbd5-4180-405b-bb4f-0097e8b82da6",
+    "difficulty": "easy",
+    "stem": "Rautalääkkeen kanssa mikä heikentää imeytymistä?",
+    "type": "single",
+    "tags": [
+      "Anemia",
+      "Interaktiot"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "C-vitamiini",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Happamat juomat",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Antasidit/kalsium",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Tyhjä vatsa",
+        "correct": false
+      }
+    ],
+    "rationale": "Kationit/alkaliset vähentävät imeytymistä."
+  },
+  {
+    "id": "55f72d58-fbeb-4cb7-b2e8-2de33df5f8e7",
+    "difficulty": "easy",
+    "stem": "HF-lääkityksessä mineralokortikoidiantagonistin esimerkki",
+    "type": "single",
+    "tags": [
+      "HF",
+      "MRA"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Asetatsolamidi",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Amiloridi",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Eplerenoni",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Indapamidi",
+        "correct": false
+      }
+    ],
+    "rationale": "Eplerenoni/spironolaktoni."
+  },
+  {
+    "id": "837a1207-4775-40db-8879-8d2910d414ce",
+    "difficulty": "medium",
+    "stem": "Nitraattien vaikutus välittyy pääosin",
+    "type": "single",
+    "tags": [
+      "CAD",
+      "Mechanism"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Na-kanavan salpaus",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Typpioksidi–cGMP -välityksellä",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "ACE-esto",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "cAMP-välitteisesti",
+        "correct": false
+      }
+    ],
+    "rationale": "NO aktivoi guanylaattisyklaasia."
+  },
+  {
+    "id": "9d9d617a-36e0-4a18-a2c5-a6c3af1623d1",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #1: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "b5fb0079-46a3-41ef-8878-0937e1e8af33",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #2: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "6f153adf-d451-42de-964d-9a248957b2c8",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #3: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "8aa70be7-d7d2-495c-82f5-0023d9702d4d",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #4: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "36181600-88ab-461e-a1e2-045b0eb31867",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #5: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "a054ab84-adbc-4ad4-9e1b-775689affd3e",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #6: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "a717b585-028e-4115-bde4-bed4f09d9516",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #7: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "2a1323bb-f564-4675-9c54-d35391902228",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #8: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "589b652d-80bd-4fa5-8398-5afe5f9964da",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #9: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "d0fb3210-83d0-42d3-b568-24ab72dee9e7",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #10: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "359e57d2-e7f7-4b59-bc42-3fe84ec88870",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #11: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "2e3a380b-3d9c-4125-a3a4-ded8d0101098",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #12: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "9fbdf697-9518-49c4-8a7a-449e73c88200",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #13: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "84d9b12f-f519-46ce-8b8e-591522fab82a",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #14: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "0752fc93-850d-419c-9701-44b7484dc095",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #15: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "04bf94b1-ffa6-439f-9f3a-51c9421720ff",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #16: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "573b7d5d-96ce-45dc-983d-7af5cd04f9a8",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #17: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "9e849dc0-bf0b-483c-bbbb-955134397902",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #18: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "c6f72eb0-c5d2-4383-91d9-92201413524b",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #19: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "e61c9975-a6ec-49c5-a653-cccd1ceaae7a",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #20: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "d21c0be2-6822-42a4-b02c-9518a893f831",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #21: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "5c8185fe-6fc7-447f-8655-a4b1c6192d1f",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #22: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "c19e80df-fc49-4be5-b0c8-097ab32acee5",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #23: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "6cd8ab4a-66ef-4193-8d3a-79a1b29fff01",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #24: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "1b80c580-d7dd-4fca-9a13-66f7ef65e914",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #25: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "45bf250d-2b92-4b8c-8a65-7d171ca34ff5",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #26: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "dc35ce66-37e9-425f-9a7e-dbbcb7d99f0e",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #27: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "2152ba23-5f9d-49e9-a752-97ecdb062072",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #28: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "3a5fd0a4-1b19-4786-818f-650bd237e986",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #29: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "a8abd0a0-9ba9-4f8f-a4e9-175e88da47e1",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #30: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "2287848c-6807-402a-b5bf-fa083818a453",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #31: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "62e10f69-e9ac-420c-8e75-6ee4171763ed",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #32: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "a34ef7e2-b713-4cba-abd5-a8cf09ff9fc5",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #33: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "99c9f6fc-456b-4509-b206-6600874d8686",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #34: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "76677ff8-79d5-4c78-a6ae-631d2a61b0a0",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #35: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "cf8f3129-3579-4e95-89c3-d01c2210c4d9",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #36: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "93175286-2403-4ba4-ab5e-ab36bae56eb6",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #37: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "84f16141-418a-44fa-adef-6d7f3f9eeb11",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #38: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "13309f8f-3419-4b4e-a9ef-c03e5322698c",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #39: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "1eafd68f-aece-4d49-bd8e-292f89a9652f",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #40: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "6d2e21d9-1b72-466c-95a6-7e397b0591b9",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #41: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "ec77d2ab-031a-43d3-9fd1-26719e726609",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #42: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "eb63e20e-06f9-4bd3-8b03-eaced2420d7e",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #43: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "898be229-e7d9-4fa2-b15d-926fbb0d0f13",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #44: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "b1f51c0e-0bd0-4ccc-a7fd-8b205a1228e1",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #45: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "6bea7894-be6c-45a0-8d7e-3a83186819cc",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #46: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "d2997155-c39f-42d4-b185-315c45e0bde3",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #47: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "355d9ddc-8e42-43b9-956d-f7ba80e7b9a2",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #48: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "119a6225-1f06-4bbf-9d9d-79e738f0ef81",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #49: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "836a4df1-c48b-4ad2-80e1-2cc1f8ec7949",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #50: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "4165935f-04a2-47a8-acfd-effeb2ef7c1a",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #51: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "e9fb7855-1861-4951-b1ed-327207c38727",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #52: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "05c75338-df4d-4812-a461-a92172b387cb",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #53: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "a73bd446-2680-4eb4-8c7b-cbb5fd6c6f83",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #54: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "ffe14510-be1c-41f0-a4ae-801440c1c0d7",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #55: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "1187ba64-139c-4cee-8c3c-bebf9dc12584",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #56: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "2bea1146-29f9-4126-a387-a9cf50cb818b",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #57: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "6a811f90-3985-4dcc-851d-9193de867692",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #58: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "e5f671ee-c444-4145-bdb7-85242b9e5645",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #59: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "4b42f0fb-6ad0-4324-a233-a889a644c24c",
+    "difficulty": "medium",
+    "stem": "Loop-diureetin (esim. furosemidi) käyttötilanne #60: mikä väite pitää parhaiten paikkansa?",
+    "type": "single",
+    "tags": [
+      "Diureetit",
+      "Loop"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Lisää kalsiumin takaisinimeytymistä",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Sopii hyperkalsemian hoitoon vain yhdessä kalsiumlisän kanssa",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "On ensisijainen verenohennuslääke",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Soveltuu akuuttiin keuhkoödeemaan nopean diureesin vuoksi",
+        "correct": true
+      }
+    ],
+    "rationale": "Loop-diureetit nopea diureesi; vähentävät Ca2+."
+  },
+  {
+    "id": "40f77015-bac3-4d38-844f-9906b007170c",
+    "difficulty": "medium",
+    "stem": "RAAS-eston vaikutukset kudostasolla #1 (valitse kaikki oikeat)",
+    "type": "multi",
+    "tags": [
+      "RAAS"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Hypokalemian lisääntyminen on tyypillistä",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Aldosteronin väheneminen",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Jälkikuorman pieneneminen verisuonidilataation myötä",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Kreatiniinin 100 % nousu on aina vasta-aihe jatkaa",
+        "correct": false
+      },
+      {
+        "label": "E",
+        "text": "Sympaattisen aktiivisuuden vaimeneminen pitkällä aikavälillä",
+        "correct": true
+      }
+    ],
+    "rationale": "RAAS-eston keskeiset vaikutukset; tarkkaile K+ ja kreatiniinia, maltillinen nousu sallitaan."
+  },
+  {
+    "id": "f737cce9-cba7-4f67-83d5-20ea7cd7c940",
+    "difficulty": "medium",
+    "stem": "RAAS-eston vaikutukset kudostasolla #2 (valitse kaikki oikeat)",
+    "type": "multi",
+    "tags": [
+      "RAAS"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Hypokalemian lisääntyminen on tyypillistä",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Kreatiniinin 100 % nousu on aina vasta-aihe jatkaa",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Sympaattisen aktiivisuuden vaimeneminen pitkällä aikavälillä",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Jälkikuorman pieneneminen verisuonidilataation myötä",
+        "correct": true
+      },
+      {
+        "label": "E",
+        "text": "Aldosteronin väheneminen",
+        "correct": true
+      }
+    ],
+    "rationale": "RAAS-eston keskeiset vaikutukset; tarkkaile K+ ja kreatiniinia, maltillinen nousu sallitaan."
+  },
+  {
+    "id": "06a349fa-68be-46b8-a9ff-3b5e3d1e1ec4",
+    "difficulty": "medium",
+    "stem": "RAAS-eston vaikutukset kudostasolla #3 (valitse kaikki oikeat)",
+    "type": "multi",
+    "tags": [
+      "RAAS"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Jälkikuorman pieneneminen verisuonidilataation myötä",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "Sympaattisen aktiivisuuden vaimeneminen pitkällä aikavälillä",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Hypokalemian lisääntyminen on tyypillistä",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Kreatiniinin 100 % nousu on aina vasta-aihe jatkaa",
+        "correct": false
+      },
+      {
+        "label": "E",
+        "text": "Aldosteronin väheneminen",
+        "correct": true
+      }
+    ],
+    "rationale": "RAAS-eston keskeiset vaikutukset; tarkkaile K+ ja kreatiniinia, maltillinen nousu sallitaan."
+  },
+  {
+    "id": "a5fba934-a2a6-40ef-9b0a-cbe7847af36d",
+    "difficulty": "medium",
+    "stem": "RAAS-eston vaikutukset kudostasolla #4 (valitse kaikki oikeat)",
+    "type": "multi",
+    "tags": [
+      "RAAS"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Aldosteronin väheneminen",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "Kreatiniinin 100 % nousu on aina vasta-aihe jatkaa",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Jälkikuorman pieneneminen verisuonidilataation myötä",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Sympaattisen aktiivisuuden vaimeneminen pitkällä aikavälillä",
+        "correct": true
+      },
+      {
+        "label": "E",
+        "text": "Hypokalemian lisääntyminen on tyypillistä",
+        "correct": false
+      }
+    ],
+    "rationale": "RAAS-eston keskeiset vaikutukset; tarkkaile K+ ja kreatiniinia, maltillinen nousu sallitaan."
+  },
+  {
+    "id": "32709d3b-6329-47e9-8456-f6ca016c408d",
+    "difficulty": "hard",
+    "stem": "RAAS-eston vaikutukset kudostasolla #5 (valitse kaikki oikeat)",
+    "type": "multi",
+    "tags": [
+      "RAAS"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Hypokalemian lisääntyminen on tyypillistä",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Kreatiniinin 100 % nousu on aina vasta-aihe jatkaa",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Jälkikuorman pieneneminen verisuonidilataation myötä",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Sympaattisen aktiivisuuden vaimeneminen pitkällä aikavälillä",
+        "correct": true
+      },
+      {
+        "label": "E",
+        "text": "Aldosteronin väheneminen",
+        "correct": true
+      }
+    ],
+    "rationale": "RAAS-eston keskeiset vaikutukset; tarkkaile K+ ja kreatiniinia, maltillinen nousu sallitaan."
+  },
+  {
+    "id": "e200e11d-8d3c-4b56-bf86-c2fe8c567cde",
+    "difficulty": "medium",
+    "stem": "RAAS-eston vaikutukset kudostasolla #6 (valitse kaikki oikeat)",
+    "type": "multi",
+    "tags": [
+      "RAAS"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Hypokalemian lisääntyminen on tyypillistä",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Sympaattisen aktiivisuuden vaimeneminen pitkällä aikavälillä",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Aldosteronin väheneminen",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Kreatiniinin 100 % nousu on aina vasta-aihe jatkaa",
+        "correct": false
+      },
+      {
+        "label": "E",
+        "text": "Jälkikuorman pieneneminen verisuonidilataation myötä",
+        "correct": true
+      }
+    ],
+    "rationale": "RAAS-eston keskeiset vaikutukset; tarkkaile K+ ja kreatiniinia, maltillinen nousu sallitaan."
+  },
+  {
+    "id": "4d3646c4-0b84-47ee-a3b4-5dda4a8d474a",
+    "difficulty": "medium",
+    "stem": "RAAS-eston vaikutukset kudostasolla #7 (valitse kaikki oikeat)",
+    "type": "multi",
+    "tags": [
+      "RAAS"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Sympaattisen aktiivisuuden vaimeneminen pitkällä aikavälillä",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "Jälkikuorman pieneneminen verisuonidilataation myötä",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Hypokalemian lisääntyminen on tyypillistä",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Kreatiniinin 100 % nousu on aina vasta-aihe jatkaa",
+        "correct": false
+      },
+      {
+        "label": "E",
+        "text": "Aldosteronin väheneminen",
+        "correct": true
+      }
+    ],
+    "rationale": "RAAS-eston keskeiset vaikutukset; tarkkaile K+ ja kreatiniinia, maltillinen nousu sallitaan."
+  },
+  {
+    "id": "a6c2cca3-a777-47ee-ae06-243d24002d5a",
+    "difficulty": "medium",
+    "stem": "RAAS-eston vaikutukset kudostasolla #8 (valitse kaikki oikeat)",
+    "type": "multi",
+    "tags": [
+      "RAAS"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Kreatiniinin 100 % nousu on aina vasta-aihe jatkaa",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Sympaattisen aktiivisuuden vaimeneminen pitkällä aikavälillä",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Aldosteronin väheneminen",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Jälkikuorman pieneneminen verisuonidilataation myötä",
+        "correct": true
+      },
+      {
+        "label": "E",
+        "text": "Hypokalemian lisääntyminen on tyypillistä",
+        "correct": false
+      }
+    ],
+    "rationale": "RAAS-eston keskeiset vaikutukset; tarkkaile K+ ja kreatiniinia, maltillinen nousu sallitaan."
+  },
+  {
+    "id": "35748d05-b717-4950-8734-3badc9bee2e5",
+    "difficulty": "medium",
+    "stem": "RAAS-eston vaikutukset kudostasolla #9 (valitse kaikki oikeat)",
+    "type": "multi",
+    "tags": [
+      "RAAS"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Aldosteronin väheneminen",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "Kreatiniinin 100 % nousu on aina vasta-aihe jatkaa",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Hypokalemian lisääntyminen on tyypillistä",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Jälkikuorman pieneneminen verisuonidilataation myötä",
+        "correct": true
+      },
+      {
+        "label": "E",
+        "text": "Sympaattisen aktiivisuuden vaimeneminen pitkällä aikavälillä",
+        "correct": true
+      }
+    ],
+    "rationale": "RAAS-eston keskeiset vaikutukset; tarkkaile K+ ja kreatiniinia, maltillinen nousu sallitaan."
+  },
+  {
+    "id": "a877ee83-80c2-4498-a8b5-807741278f81",
+    "difficulty": "hard",
+    "stem": "RAAS-eston vaikutukset kudostasolla #10 (valitse kaikki oikeat)",
+    "type": "multi",
+    "tags": [
+      "RAAS"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Sympaattisen aktiivisuuden vaimeneminen pitkällä aikavälillä",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "Aldosteronin väheneminen",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Hypokalemian lisääntyminen on tyypillistä",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Jälkikuorman pieneneminen verisuonidilataation myötä",
+        "correct": true
+      },
+      {
+        "label": "E",
+        "text": "Kreatiniinin 100 % nousu on aina vasta-aihe jatkaa",
+        "correct": false
+      }
+    ],
+    "rationale": "RAAS-eston keskeiset vaikutukset; tarkkaile K+ ja kreatiniinia, maltillinen nousu sallitaan."
+  },
+  {
+    "id": "7b7aa5a5-6fa0-4073-a366-b3078fdedbbe",
+    "difficulty": "medium",
+    "stem": "RAAS-eston vaikutukset kudostasolla #11 (valitse kaikki oikeat)",
+    "type": "multi",
+    "tags": [
+      "RAAS"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Sympaattisen aktiivisuuden vaimeneminen pitkällä aikavälillä",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "Jälkikuorman pieneneminen verisuonidilataation myötä",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Hypokalemian lisääntyminen on tyypillistä",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Kreatiniinin 100 % nousu on aina vasta-aihe jatkaa",
+        "correct": false
+      },
+      {
+        "label": "E",
+        "text": "Aldosteronin väheneminen",
+        "correct": true
+      }
+    ],
+    "rationale": "RAAS-eston keskeiset vaikutukset; tarkkaile K+ ja kreatiniinia, maltillinen nousu sallitaan."
+  },
+  {
+    "id": "348fb516-527f-472e-bc6b-70d5f1673ec0",
+    "difficulty": "medium",
+    "stem": "RAAS-eston vaikutukset kudostasolla #12 (valitse kaikki oikeat)",
+    "type": "multi",
+    "tags": [
+      "RAAS"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Hypokalemian lisääntyminen on tyypillistä",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Aldosteronin väheneminen",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Kreatiniinin 100 % nousu on aina vasta-aihe jatkaa",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Jälkikuorman pieneneminen verisuonidilataation myötä",
+        "correct": true
+      },
+      {
+        "label": "E",
+        "text": "Sympaattisen aktiivisuuden vaimeneminen pitkällä aikavälillä",
+        "correct": true
+      }
+    ],
+    "rationale": "RAAS-eston keskeiset vaikutukset; tarkkaile K+ ja kreatiniinia, maltillinen nousu sallitaan."
+  },
+  {
+    "id": "71dc9660-b5c4-49ba-89a8-524c8c5df250",
+    "difficulty": "medium",
+    "stem": "RAAS-eston vaikutukset kudostasolla #13 (valitse kaikki oikeat)",
+    "type": "multi",
+    "tags": [
+      "RAAS"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Jälkikuorman pieneneminen verisuonidilataation myötä",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "Aldosteronin väheneminen",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Sympaattisen aktiivisuuden vaimeneminen pitkällä aikavälillä",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Hypokalemian lisääntyminen on tyypillistä",
+        "correct": false
+      },
+      {
+        "label": "E",
+        "text": "Kreatiniinin 100 % nousu on aina vasta-aihe jatkaa",
+        "correct": false
+      }
+    ],
+    "rationale": "RAAS-eston keskeiset vaikutukset; tarkkaile K+ ja kreatiniinia, maltillinen nousu sallitaan."
+  },
+  {
+    "id": "bf299020-bc1c-4a6c-8261-8a9dd1d3a580",
+    "difficulty": "medium",
+    "stem": "RAAS-eston vaikutukset kudostasolla #14 (valitse kaikki oikeat)",
+    "type": "multi",
+    "tags": [
+      "RAAS"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Hypokalemian lisääntyminen on tyypillistä",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Jälkikuorman pieneneminen verisuonidilataation myötä",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Aldosteronin väheneminen",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Sympaattisen aktiivisuuden vaimeneminen pitkällä aikavälillä",
+        "correct": true
+      },
+      {
+        "label": "E",
+        "text": "Kreatiniinin 100 % nousu on aina vasta-aihe jatkaa",
+        "correct": false
+      }
+    ],
+    "rationale": "RAAS-eston keskeiset vaikutukset; tarkkaile K+ ja kreatiniinia, maltillinen nousu sallitaan."
+  },
+  {
+    "id": "b60c9fc5-db17-4c2f-83d7-c7c86498be27",
+    "difficulty": "hard",
+    "stem": "RAAS-eston vaikutukset kudostasolla #15 (valitse kaikki oikeat)",
+    "type": "multi",
+    "tags": [
+      "RAAS"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Aldosteronin väheneminen",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "Kreatiniinin 100 % nousu on aina vasta-aihe jatkaa",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Sympaattisen aktiivisuuden vaimeneminen pitkällä aikavälillä",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Hypokalemian lisääntyminen on tyypillistä",
+        "correct": false
+      },
+      {
+        "label": "E",
+        "text": "Jälkikuorman pieneneminen verisuonidilataation myötä",
+        "correct": true
+      }
+    ],
+    "rationale": "RAAS-eston keskeiset vaikutukset; tarkkaile K+ ja kreatiniinia, maltillinen nousu sallitaan."
+  },
+  {
+    "id": "b78347ec-1d9c-4247-b242-99d1158e06b0",
+    "difficulty": "medium",
+    "stem": "RAAS-eston vaikutukset kudostasolla #16 (valitse kaikki oikeat)",
+    "type": "multi",
+    "tags": [
+      "RAAS"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Aldosteronin väheneminen",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "Jälkikuorman pieneneminen verisuonidilataation myötä",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Sympaattisen aktiivisuuden vaimeneminen pitkällä aikavälillä",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Hypokalemian lisääntyminen on tyypillistä",
+        "correct": false
+      },
+      {
+        "label": "E",
+        "text": "Kreatiniinin 100 % nousu on aina vasta-aihe jatkaa",
+        "correct": false
+      }
+    ],
+    "rationale": "RAAS-eston keskeiset vaikutukset; tarkkaile K+ ja kreatiniinia, maltillinen nousu sallitaan."
+  },
+  {
+    "id": "0ebbdf27-b452-4d9d-bc50-1850482aae8c",
+    "difficulty": "medium",
+    "stem": "RAAS-eston vaikutukset kudostasolla #17 (valitse kaikki oikeat)",
+    "type": "multi",
+    "tags": [
+      "RAAS"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Jälkikuorman pieneneminen verisuonidilataation myötä",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "Aldosteronin väheneminen",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Kreatiniinin 100 % nousu on aina vasta-aihe jatkaa",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Hypokalemian lisääntyminen on tyypillistä",
+        "correct": false
+      },
+      {
+        "label": "E",
+        "text": "Sympaattisen aktiivisuuden vaimeneminen pitkällä aikavälillä",
+        "correct": true
+      }
+    ],
+    "rationale": "RAAS-eston keskeiset vaikutukset; tarkkaile K+ ja kreatiniinia, maltillinen nousu sallitaan."
+  },
+  {
+    "id": "1e7f0ab7-af71-41df-8c16-f6699f9a44f1",
+    "difficulty": "medium",
+    "stem": "RAAS-eston vaikutukset kudostasolla #18 (valitse kaikki oikeat)",
+    "type": "multi",
+    "tags": [
+      "RAAS"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Aldosteronin väheneminen",
+        "correct": true
+      },
+      {
+        "label": "B",
+        "text": "Jälkikuorman pieneneminen verisuonidilataation myötä",
+        "correct": true
+      },
+      {
+        "label": "C",
+        "text": "Hypokalemian lisääntyminen on tyypillistä",
+        "correct": false
+      },
+      {
+        "label": "D",
+        "text": "Sympaattisen aktiivisuuden vaimeneminen pitkällä aikavälillä",
+        "correct": true
+      },
+      {
+        "label": "E",
+        "text": "Kreatiniinin 100 % nousu on aina vasta-aihe jatkaa",
+        "correct": false
+      }
+    ],
+    "rationale": "RAAS-eston keskeiset vaikutukset; tarkkaile K+ ja kreatiniinia, maltillinen nousu sallitaan."
+  },
+  {
+    "id": "65d4ab0a-5d8c-4cf8-84d2-08581ed2a906",
+    "difficulty": "medium",
+    "stem": "RAAS-eston vaikutukset kudostasolla #19 (valitse kaikki oikeat)",
+    "type": "multi",
+    "tags": [
+      "RAAS"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Kreatiniinin 100 % nousu on aina vasta-aihe jatkaa",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Hypokalemian lisääntyminen on tyypillistä",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Aldosteronin väheneminen",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Sympaattisen aktiivisuuden vaimeneminen pitkällä aikavälillä",
+        "correct": true
+      },
+      {
+        "label": "E",
+        "text": "Jälkikuorman pieneneminen verisuonidilataation myötä",
+        "correct": true
+      }
+    ],
+    "rationale": "RAAS-eston keskeiset vaikutukset; tarkkaile K+ ja kreatiniinia, maltillinen nousu sallitaan."
+  },
+  {
+    "id": "ce6ec3fc-532e-41a3-a576-93caa52011b9",
+    "difficulty": "hard",
+    "stem": "RAAS-eston vaikutukset kudostasolla #20 (valitse kaikki oikeat)",
+    "type": "multi",
+    "tags": [
+      "RAAS"
+    ],
+    "options": [
+      {
+        "label": "A",
+        "text": "Kreatiniinin 100 % nousu on aina vasta-aihe jatkaa",
+        "correct": false
+      },
+      {
+        "label": "B",
+        "text": "Hypokalemian lisääntyminen on tyypillistä",
+        "correct": false
+      },
+      {
+        "label": "C",
+        "text": "Aldosteronin väheneminen",
+        "correct": true
+      },
+      {
+        "label": "D",
+        "text": "Sympaattisen aktiivisuuden vaimeneminen pitkällä aikavälillä",
+        "correct": true
+      },
+      {
+        "label": "E",
+        "text": "Jälkikuorman pieneneminen verisuonidilataation myötä",
+        "correct": true
+      }
+    ],
+    "rationale": "RAAS-eston keskeiset vaikutukset; tarkkaile K+ ja kreatiniinia, maltillinen nousu sallitaan."
+  }
+];
+    
+    // ============================================
+    // GLOBAALIT MUUTTUJAT
+    // ============================================
+    
+    let currentExam = null;
+    let currentQuestionIndex = 0;
+    let timerInterval = null;
+    let timeRemaining = 115 * 60; // 115 min in seconds
+    let showingResults = false;
+    let drillAnswers = {};
+    
+    // ============================================
+    // SEEDED RNG
+    // ============================================
+    
+    function seededRandom(seed) {
+      let state = seed;
+      return function() {
+        state = (state * 1103515245 + 12345) & 0x7fffffff;
+        return state / 0x7fffffff;
+      };
+    }
+    
+    function getSeed() {
+      const params = new URLSearchParams(window.location.search);
+      const seedParam = params.get('seed');
+      if (seedParam) {
+        return parseInt(seedParam);
+      }
+      return Date.now();
+    }
+    
+    // ============================================
+    // KYSYMYSTEN ARPOMINEN
+    // ============================================
+    
+    function selectQuestions(seed) {
+      const rng = seededRandom(seed);
+      
+      const easy = QUESTION_BANK.filter(q => q.difficulty === 'easy');
+      const medium = QUESTION_BANK.filter(q => q.difficulty === 'medium');
+      const hard = QUESTION_BANK.filter(q => q.difficulty === 'hard');
+      
+      function shuffle(array, rng) {
+        const arr = [...array];
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(rng() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+      }
+      
+      // Tarkista onko tarpeeksi kysymyksiä
+      const targetEasy = Math.min(20, easy.length);
+      const targetMedium = Math.min(20, medium.length);
+      const targetHard = Math.min(10, hard.length);
+      
+      const selectedEasy = shuffle(easy, rng).slice(0, targetEasy);
+      const selectedMedium = shuffle(medium, rng).slice(0, targetMedium);
+      const selectedHard = shuffle(hard, rng).slice(0, targetHard);
+      
+      const allSelected = [...selectedEasy, ...selectedMedium, ...selectedHard];
+      
+      // Jos ei ole 50 kysymystä, täytä loput kaikista saatavilla olevista
+      if (allSelected.length < 50) {
+        const remaining = QUESTION_BANK.filter(q => !allSelected.includes(q));
+        const needed = 50 - allSelected.length;
+        const additional = shuffle(remaining, rng).slice(0, needed);
+        allSelected.push(...additional);
+      }
+      
+      return shuffle(allSelected, rng);
+    }
+    
+    // ============================================
+    // PISTEYTYS
+    // ============================================
+    
+    function gradeQuestion(question, answerSet) {
+      const correctOptions = question.options.filter(o => o.correct);
+      const incorrectOptions = question.options.filter(o => !o.correct);
+      
+      const rightCount = correctOptions.length;
+      const wrongCount = incorrectOptions.length;
+      
+      let correctTicks = 0;
+      let wrongTicks = 0;
+      
+      answerSet.forEach(label => {
+        const option = question.options.find(o => o.label === label);
+        if (option && option.correct) {
+          correctTicks++;
+        } else if (option) {
+          wrongTicks++;
+        }
+      });
+      
+      const raw = (correctTicks / rightCount) - (wrongTicks / wrongCount);
+      const clamped = Math.max(0, raw);
+      
+      return { raw, clamped, correctTicks, wrongTicks, rightCount, wrongCount };
+    }
+    
+    // ============================================
+    // LOCALSTORAGE
+    // ============================================
+    
+    function saveExamState() {
+      if (!currentExam) return;
+      
+      const state = {
+        seed: currentExam.seed,
+        answers: currentExam.answers,
+        flagged: currentExam.flagged,
+        timeRemaining: timeRemaining,
+        currentQuestionIndex: currentQuestionIndex
+      };
+      
+      localStorage.setItem('examState', JSON.stringify(state));
+    }
+    
+    function loadExamState() {
+      const saved = localStorage.getItem('examState');
+      if (!saved) return null;
+      
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return null;
+      }
+    }
+    
+    function clearExamState() {
+      localStorage.removeItem('examState');
+    }
+    
+    // ============================================
+    // AJASTIN
+    // ============================================
+    
+    function startTimer() {
+      stopTimer();
+      
+      timerInterval = setInterval(() => {
+        timeRemaining--;
+        updateTimerDisplay();
+        saveExamState();
+        
+        if (timeRemaining <= 0) {
+          stopTimer();
+          alert('Aika loppui! Koe päättyy automaattisesti.');
+          finishExam();
+        }
+      }, 1000);
+    }
+    
+    function stopTimer() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+    }
+    
+    function updateTimerDisplay() {
+      const minutes = Math.floor(timeRemaining / 60);
+      const seconds = timeRemaining % 60;
+      const display = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      
+      const timerEl = document.getElementById('timer');
+      timerEl.textContent = display;
+      
+      if (timeRemaining < 300) {
+        timerEl.className = 'timer danger';
+      } else if (timeRemaining < 900) {
+        timerEl.className = 'timer warning';
+      } else {
+        timerEl.className = 'timer';
+      }
+    }
+    
+    // ============================================
+    // KÄYTTÖLIITTYMÄ
+    // ============================================
+    
+    function startExam() {
+      const seed = getSeed();
+      
+      // Tarkista että on vähintään 50 kysymystä
+      if (QUESTION_BANK.length < 50) {
+        alert(`Kysymyspankissa on vain ${QUESTION_BANK.length} kysymystä. Tarvitaan vähintään 50 kysymystä.\\n\\nLisää kysymyksiä QUESTION_BANK-taulukkoon.`);
+        return;
+      }
+      
+      const questions = selectQuestions(seed);
+      
+      currentExam = {
+        seed: seed,
+        questions: questions,
+        answers: {},
+        flagged: new Set(),
+        startTime: Date.now()
+      };
+      
+      currentQuestionIndex = 0;
+      timeRemaining = 115 * 60;
+      
+      clearExamState();
+      saveExamState();
+      
+      startTimer();
+      showQuestion();
+      
+      document.getElementById('finish-btn').classList.remove('hidden');
+    }
+    
+    function showStartScreen() {
+      const app = document.getElementById('app');
+      app.innerHTML = `
+        <div class="start-screen">
+          <h1>Tervetuloa Examinarium-simulaatioon!</h1>
+          <p>Sinulle arvotaan 50 kysymystä (20 easy, 20 medium, 10 hard)</p>
+          <p>Aikaa on 115 minuuttia</p>
+          <button class="btn btn-success" onclick="startExam()" style="font-size: 1.2rem; padding: 15px 40px;">
+            🚀 Aloita simulaatio
+          </button>
+          <div style="margin-top: 30px;">
+            <button class="btn btn-secondary" onclick="loadPreviousExam()" id="continue-btn" style="display: none;">
+              ↩️ Jatka kesken jäänyttä koetta
+            </button>
+          </div>
+        </div>
+      `;
+      
+      // Check if there's a saved exam
+      const saved = loadExamState();
+      if (saved && saved.seed) {
+        document.getElementById('continue-btn').style.display = 'inline-block';
+      }
+    }
+    
+    function loadPreviousExam() {
+      const saved = loadExamState();
+      if (!saved) {
+        alert('Ei tallennettua koetta!');
+        return;
+      }
+      
+      const questions = selectQuestions(saved.seed);
+      
+      currentExam = {
+        seed: saved.seed,
+        questions: questions,
+        answers: saved.answers || {},
+        flagged: new Set(saved.flagged || []),
+        startTime: Date.now() - ((115 * 60 - saved.timeRemaining) * 1000)
+      };
+      
+      currentQuestionIndex = saved.currentQuestionIndex || 0;
+      timeRemaining = saved.timeRemaining || 115 * 60;
+      
+      startTimer();
+      showQuestion();
+      
+      document.getElementById('finish-btn').classList.remove('hidden');
+    }
+    
+    function showQuestion() {
+      if (!currentExam) return;
+      
+      const question = currentExam.questions[currentQuestionIndex];
+      const isLast = currentQuestionIndex === currentExam.questions.length - 1;
+      const isFirst = currentQuestionIndex === 0;
+      
+      const app = document.getElementById('app');
+      
+      const userAnswers = currentExam.answers[question.id] || [];
+      const isFlagged = currentExam.flagged.has(question.id);
+      
+      let optionsHTML = '';
+      
+      if (question.type === 'single') {
+        optionsHTML = question.options.map(opt => `
+          <div class="option ${userAnswers.includes(opt.label) ? 'selected' : ''}" 
+               onclick="selectOption('${opt.label}', 'single')">
+            <label class="option-label">
+              <input type="radio" 
+                     name="answer" 
+                     value="${opt.label}" 
+                     ${userAnswers.includes(opt.label) ? 'checked' : ''}
+                     onchange="selectOption('${opt.label}', 'single')">
+              <span class="option-text"><strong>${opt.label}.</strong> ${opt.text}</span>
+            </label>
+          </div>
+        `).join('');
+      } else {
+        optionsHTML = question.options.map(opt => `
+          <div class="option ${userAnswers.includes(opt.label) ? 'selected' : ''}" 
+               onclick="toggleOption('${opt.label}')">
+            <label class="option-label">
+              <input type="checkbox" 
+                     value="${opt.label}" 
+                     ${userAnswers.includes(opt.label) ? 'checked' : ''}
+                     onchange="toggleOption('${opt.label}')">
+              <span class="option-text"><strong>${opt.label}.</strong> ${opt.text}</span>
+            </label>
+          </div>
+        `).join('');
+      }
+      
+      app.innerHTML = `
+        <div class="main-layout">
+          <div class="question-panel">
+            <div class="question-header">
+              <div>
+                <h2>Kysymys ${currentQuestionIndex + 1} / 50</h2>
+                <div class="question-meta">
+                  <span class="badge badge-${question.difficulty}">${question.difficulty.toUpperCase()}</span>
+                  <span class="badge" style="background: var(--bg-secondary);">
+                    ${question.type === 'single' ? '4 vaihtoehtoa - valitse 1' : '5 vaihtoehtoa - valitse kaikki oikeat'}
+                  </span>
+                  ${isFlagged ? '<span class="badge badge-warning">🚩 Merkitty</span>' : ''}
+                </div>
+              </div>
+            </div>
+            
+            <div class="question-stem">${question.stem}</div>
+            
+            <div class="options">
+              ${optionsHTML}
+            </div>
+            
+            ${showingResults ? generateRationale(question, userAnswers) : ''}
+            
+            <div class="navigation">
+              <div class="nav-buttons">
+                <button class="btn btn-secondary" 
+                        onclick="previousQuestion()" 
+                        ${isFirst ? 'disabled' : ''}>
+                  ← Edellinen
+                </button>
+                <button class="btn" 
+                        onclick="nextQuestion()">
+                  ${isLast ? 'Viimeinen kysymys' : 'Seuraava →'}
+                </button>
+              </div>
+              <button class="btn btn-warning" onclick="toggleFlag()">
+                ${isFlagged ? '✓ Merkitty' : '🚩 Merkitse'}
+              </button>
+            </div>
+          </div>
+          
+          <div class="side-panel">
+            <h3>Kysymykset</h3>
+            <div class="question-grid">
+              ${generateQuestionGrid()}
+            </div>
+            <div style="margin-top: 20px; font-size: 0.85rem; color: var(--text-secondary);">
+              <div style="display: flex; align-items: center; gap: 8px; margin: 5px 0;">
+                <div style="width: 20px; height: 20px; background: var(--unanswered); border-radius: 4px;"></div>
+                <span>Ei vastattu</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px; margin: 5px 0;">
+                <div style="width: 20px; height: 20px; background: var(--answered); border-radius: 4px;"></div>
+                <span>Vastattu</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px; margin: 5px 0;">
+                <div style="width: 20px; height: 20px; background: var(--flagged); border-radius: 4px;"></div>
+                <span>Merkitty</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      updateAnsweredCount();
+    }
+    
+    function generateQuestionGrid() {
+      if (!currentExam) return '';
+      
+      return currentExam.questions.map((q, idx) => {
+        const answered = currentExam.answers[q.id] && currentExam.answers[q.id].length > 0;
+        const flagged = currentExam.flagged.has(q.id);
+        const isCurrent = idx === currentQuestionIndex;
+        
+        let classes = ['question-number'];
+        if (flagged) classes.push('flagged');
+        else if (answered) classes.push('answered');
+        else classes.push('unanswered');
+        
+        if (isCurrent) classes.push('current');
+        
+        return `<div class="${classes.join(' ')}" onclick="goToQuestion(${idx})">${idx + 1}</div>`;
+      }).join('');
+    }
+    
+    function selectOption(label, type) {
+      if (!currentExam || showingResults) return;
+      
+      const question = currentExam.questions[currentQuestionIndex];
+      currentExam.answers[question.id] = [label];
+      
+      saveExamState();
+      showQuestion();
+    }
+    
+    function toggleOption(label) {
+      if (!currentExam || showingResults) return;
+      
+      const question = currentExam.questions[currentQuestionIndex];
+      const current = currentExam.answers[question.id] || [];
+      
+      if (current.includes(label)) {
+        currentExam.answers[question.id] = current.filter(l => l !== label);
+      } else {
+        currentExam.answers[question.id] = [...current, label];
+      }
+      
+      saveExamState();
+      showQuestion();
+    }
+    
+    function toggleFlag() {
+      if (!currentExam || showingResults) return;
+      
+      const question = currentExam.questions[currentQuestionIndex];
+      
+      if (currentExam.flagged.has(question.id)) {
+        currentExam.flagged.delete(question.id);
+      } else {
+        currentExam.flagged.add(question.id);
+      }
+      
+      saveExamState();
+      showQuestion();
+    }
+    
+    function nextQuestion() {
+      if (currentQuestionIndex < currentExam.questions.length - 1) {
+        currentQuestionIndex++;
+        saveExamState();
+        showQuestion();
+      }
+    }
+    
+    function previousQuestion() {
+      if (currentQuestionIndex > 0) {
+        currentQuestionIndex--;
+        saveExamState();
+        showQuestion();
+      }
+    }
+    
+    function goToQuestion(index) {
+      if (showingResults) return;
+      currentQuestionIndex = index;
+      saveExamState();
+      showQuestion();
+    }
+    
+    function updateAnsweredCount() {
+      if (!currentExam) return;
+      
+      const answered = Object.keys(currentExam.answers).filter(qId => {
+        return currentExam.answers[qId] && currentExam.answers[qId].length > 0;
+      }).length;
+      
+      document.getElementById('answered-count').textContent = `${answered} / 50`;
+    }
+    
+    // ============================================
+    // LOPPURAPORTTI
+    // ============================================
+    
+    function finishExam() {
+      if (!currentExam) return;
+      
+      if (!showingResults) {
+        const answered = Object.keys(currentExam.answers).filter(qId => {
+          return currentExam.answers[qId] && currentExam.answers[qId].length > 0;
+        }).length;
+        
+        if (answered < 50) {
+          if (!confirm(`Olet vastannut vain ${answered}/50 kysymykseen. Haluatko varmasti lopettaa?`)) {
+            return;
+          }
+        }
+      }
+      
+      stopTimer();
+      showingResults = true;
+      
+      // Calculate scores
+      let totalScore = 0;
+      const scoresByDifficulty = { easy: 0, medium: 0, hard: 0 };
+      const countsByDifficulty = { easy: 0, medium: 0, hard: 0 };
+      const wrongQuestions = [];
+      
+      currentExam.questions.forEach(q => {
+        const answers = currentExam.answers[q.id] || [];
+        const result = gradeQuestion(q, answers);
+        
+        totalScore += result.clamped;
+        scoresByDifficulty[q.difficulty] += result.clamped;
+        countsByDifficulty[q.difficulty]++;
+        
+        if (result.clamped < 1) {
+          wrongQuestions.push({ question: q, result, answers });
+        }
+      });
+      
+      const passed = totalScore >= 25.5;
+      
+      // Generate must-fix analysis
+      const mustFix = generateMustFix(wrongQuestions);
+      
+      // Generate mini drills
+      const miniDrills = generateMiniDrills(wrongQuestions);
+      
+      const app = document.getElementById('app');
+      app.innerHTML = `
+        <div class="report">
+          <div class="report-header">
+            <h1>${passed ? '🎉 Läpäisit kokeen!' : '❌ Ei läpäisty'}</h1>
+            <div class="score-display ${passed ? 'pass' : 'fail'}">
+              ${totalScore.toFixed(2)} / 50
+            </div>
+            <p style="font-size: 1.2rem; color: var(--text-secondary);">
+              ${passed ? 'Onneksi olkoon!' : 'Läpäisyraja: 25.5 pistettä (51%)'}
+            </p>
+          </div>
+          
+          <div class="score-breakdown">
+            <div class="score-card">
+              <h4>Easy (20 kpl)</h4>
+              <div class="score">${scoresByDifficulty.easy.toFixed(2)}</div>
+            </div>
+            <div class="score-card">
+              <h4>Medium (20 kpl)</h4>
+              <div class="score">${scoresByDifficulty.medium.toFixed(2)}</div>
+            </div>
+            <div class="score-card">
+              <h4>Hard (10 kpl)</h4>
+              <div class="score">${scoresByDifficulty.hard.toFixed(2)}</div>
+            </div>
+          </div>
+          
+          <div class="must-fix">
+            <h3>🎯 Must-Fix 10 - Suurimmat virheet</h3>
+            <div class="must-fix-list">
+              ${mustFix.map((item, idx) => `
+                <div class="must-fix-item">
+                  <strong>${idx + 1}. ${item.topic}</strong><br>
+                  <span style="color: var(--text-secondary);">
+                    ${item.count} ${item.count === 1 ? 'virhe' : 'virhettä'} - ${item.description}
+                  </span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          
+          <div class="mini-drills">
+            <h3>💪 Minidriillit (${miniDrills.length} kpl)</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 20px;">
+              Harjoittele virhealttiita aihealueita näillä kohdennetuilla kysymyksillä:
+            </p>
+            ${miniDrills.map((drill, idx) => `
+              <div class="drill-question">
+                <strong>Driilli ${idx + 1}:</strong> ${drill.stem}
+                <div class="drill-options">
+                  ${drill.options.map(opt => `
+                    <div class="option ${drillAnswers[idx] === opt.label ? 'selected' : ''}" 
+                         onclick="answerDrill(${idx}, '${opt.label}')">
+                      <label class="option-label">
+                        <input type="${drill.type === 'single' ? 'radio' : 'checkbox'}" 
+                               name="drill-${idx}"
+                               ${drillAnswers[idx] === opt.label ? 'checked' : ''}>
+                        <span class="option-text"><strong>${opt.label}.</strong> ${opt.text}</span>
+                      </label>
+                    </div>
+                  `).join('')}
+                </div>
+                <div id="drill-result-${idx}"></div>
+              </div>
+            `).join('')}
+          </div>
+          
+          <div class="controls">
+            <button class="btn btn-success" onclick="revealAnswers()">
+              👁️ Paljasta vastaukset + perustelut
+            </button>
+            <button class="btn" onclick="exportCSV()">
+              📊 Vie CSV
+            </button>
+            <button class="btn btn-danger" onclick="resetExam()">
+              🔄 Aloita uusi koe
+            </button>
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('finish-btn').classList.add('hidden');
+    }
+    
+    function generateMustFix(wrongQuestions) {
+      // Keywords for categorization
+      const keywords = {
+        'ACE/ARB/ARNI': ['ACE', 'ARB', 'ARNI', 'enalapriili', 'kaptopriili', 'losartaani', 'kandesartaani', 'sakubitriili'],
+        'Beetasalpaajat': ['beetasalpaaja', 'betasalpaaja', 'bisoprololi', 'metoprololi', 'karvediloli', 'atenololi', 'propranololi'],
+        'SGLT2-estäjät': ['SGLT2', 'dapagli', 'empagli', 'kanagliflotsiin'],
+        'Diureetit': ['diureetti', 'furosemidi', 'bumetanidi', 'hydroklo', 'tiatsidi', 'spironolaktoni', 'amiloridi'],
+        'Kalsiumkanavasalpaajat': ['kalsiumkanava', 'amlodipiini', 'diltiatseemi', 'verapamiili', 'nifedipiini', 'DHP'],
+        'P2Y12-estäjät': ['P2Y12', 'klopidogreeli', 'prasugre', 'tikagrelo'],
+        'Varfariini/DOAC': ['varfariini', 'DOAC', 'dabigatraani', 'apiksabaani', 'rivaroksabaani', 'edoksabaani'],
+        'Hepariinit': ['hepariini', 'LMWH', 'enoksapariini', 'daltepariini'],
+        'Statiinit': ['statiini', 'atorvastatiini', 'simvastatiini', 'rosuvastatiini'],
+        'Muut lipidilääkkeet': ['etsetimibi', 'PCSK9', 'fibra'],
+        'Nitraatit': ['nitraatti', 'isosorbidi', 'nitroglyseriin'],
+        'Rytmihäiriölääkkeet': ['rytmi', 'amiodaro', 'flekainidi', 'propafenoni', 'eteisvärinä'],
+        'Anemia': ['anemia', 'rauta', 'B12', 'folaatti', 'erytropoiet'],
+        'Sydämen vajaatoiminta': ['vajaatoiminta', 'HFrEF', 'HFpEF'],
+        'Sepelvaltimotauti': ['sepelvaltimo', 'CAD', 'angina', 'ACS']
+      };
+      
+      const topicErrors = {};
+      
+      wrongQuestions.forEach(({ question, result }) => {
+        const stem = question.stem.toLowerCase();
+        
+        Object.keys(keywords).forEach(topic => {
+          const matches = keywords[topic].some(kw => stem.includes(kw.toLowerCase()));
+          if (matches) {
+            if (!topicErrors[topic]) {
+              topicErrors[topic] = { count: 0, questions: [] };
+            }
+            topicErrors[topic].count++;
+            topicErrors[topic].questions.push(question);
+          }
+        });
+      });
+      
+      // Sort by count and take top 10
+      const sorted = Object.entries(topicErrors)
+        .sort((a, b) => b[1].count - a[1].count)
+        .slice(0, 10)
+        .map(([topic, data]) => ({
+          topic,
+          count: data.count,
+          description: generateTopicDescription(topic, data.questions)
+        }));
+      
+      return sorted.length > 0 ? sorted : [
+        { topic: 'Ei merkittäviä virheitä', count: 0, description: 'Suoriuduit erinomaisesti!' }
+      ];
+    }
+    
+    function generateTopicDescription(topic, questions) {
+      const descriptions = {
+        'ACE/ARB/ARNI': 'Kertaa RAAS-salpaajien vaikutusmekanismit ja sivuvaikutukset',
+        'Beetasalpaajat': 'Kertaa beetasalpaajien käyttöaiheet ja vasta-aiheet',
+        'SGLT2-estäjät': 'Kertaa SGLT2-estäjien käyttö sydämen vajaatoiminnassa',
+        'Diureetit': 'Kertaa diureettien luokat ja elektrolyyttivaikutukset',
+        'Kalsiumkanavasalpaajat': 'Kertaa DHP- ja non-DHP-erot',
+        'P2Y12-estäjät': 'Kertaa P2Y12-estäjien indikaatiot ja kestot',
+        'Varfariini/DOAC': 'Kertaa DOAC vs. varfariini ja antidootit',
+        'Hepariinit': 'Kertaa hepariinien käyttö ja seuranta',
+        'Statiinit': 'Kertaa statiinien sivuvaikutukset ja annostus',
+        'Muut lipidilääkkeet': 'Kertaa PCSK9-estäjät ja etsetimi',
+        'Nitraatit': 'Kertaa nitraattien käyttö ja toleranssi',
+        'Rytmihäiriölääkkeet': 'Kertaa antiarytmien luokat ja käyttö',
+        'Anemia': 'Kertaa anemian hoidon perusteet',
+        'Sydämen vajaatoiminta': 'Kertaa HFrEF:n nelilääkehoito',
+        'Sepelvaltimotauti': 'Kertaa sepelvaltimoitaudin lääkehoito'
+      };
+      
+      return descriptions[topic] || 'Kertaa aihe perusteellisesti';
+    }
+    
+    function generateMiniDrills(wrongQuestions) {
+      if (wrongQuestions.length === 0) {
+        return [];
+      }
+      
+      // Extract topics from wrong questions
+      const topics = new Set();
+      wrongQuestions.forEach(({ question }) => {
+        const stem = question.stem.toLowerCase();
+        if (stem.includes('ace') || stem.includes('arb') || stem.includes('arni')) topics.add('ACE/ARB');
+        if (stem.includes('beta') || stem.includes('beeta')) topics.add('Beetasalpaajat');
+        if (stem.includes('sglt2')) topics.add('SGLT2');
+        if (stem.includes('diureetti') || stem.includes('furosemidi')) topics.add('Diureetit');
+        if (stem.includes('p2y12') || stem.includes('klopidogreeli')) topics.add('P2Y12');
+        if (stem.includes('varfariini') || stem.includes('doac')) topics.add('Antikoagulantit');
+        if (stem.includes('statiini')) topics.add('Statiinit');
+      });
+      
+      const drills = [];
+      const topicsArray = Array.from(topics).slice(0, 8);
+      
+      // Generate 2 drills per topic (up to 16 total)
+      topicsArray.forEach(topic => {
+        drills.push(...getDrillsForTopic(topic));
+      });
+      
+      return drills.slice(0, 16);
+    }
+    
+    function getDrillsForTopic(topic) {
+      const drillBank = {
+        'ACE/ARB': [
+          {
+            stem: 'ACE-estäjien yleisin sivuvaikutus on yskä. Tosi vai epätosi?',
+            type: 'single',
+            options: [
+              { label: 'A', text: 'Tosi', correct: true },
+              { label: 'B', text: 'Epätosi', correct: false }
+            ]
+          },
+          {
+            stem: 'ARB-valmisteet voivat aiheuttaa hyperkalemian. Tosi vai epätosi?',
+            type: 'single',
+            options: [
+              { label: 'A', text: 'Tosi', correct: true },
+              { label: 'B', text: 'Epätosi', correct: false }
+            ]
+          }
+        ],
+        'Beetasalpaajat': [
+          {
+            stem: 'Beetasalpaajat ovat vasta-aiheisia akuutissa sydämen vajaatoiminnassa. Tosi vai epätosi?',
+            type: 'single',
+            options: [
+              { label: 'A', text: 'Tosi', correct: true },
+              { label: 'B', text: 'Epätosi', correct: false }
+            ]
+          },
+          {
+            stem: 'Karvediloli on sekä alfa- että beetasalpaaja. Tosi vai epätosi?',
+            type: 'single',
+            options: [
+              { label: 'A', text: 'Tosi', correct: true },
+              { label: 'B', text: 'Epätosi', correct: false }
+            ]
+          }
+        ],
+        'SGLT2': [
+          {
+            stem: 'SGLT2-estäjät vähentävät kuolleisuutta HFrEF:ssä. Tosi vai epätosi?',
+            type: 'single',
+            options: [
+              { label: 'A', text: 'Tosi', correct: true },
+              { label: 'B', text: 'Epätosi', correct: false }
+            ]
+          },
+          {
+            stem: 'SGLT2-estäjien käyttö vaatii normaalia munuaistoimintaa. Tosi vai epätosi?',
+            type: 'single',
+            options: [
+              { label: 'A', text: 'Tosi', correct: false },
+              { label: 'B', text: 'Epätosi', correct: true }
+            ]
+          }
+        ],
+        'Diureetit': [
+          {
+            stem: 'Furosemidi on loop-diureetti. Tosi vai epätosi?',
+            type: 'single',
+            options: [
+              { label: 'A', text: 'Tosi', correct: true },
+              { label: 'B', text: 'Epätosi', correct: false }
+            ]
+          },
+          {
+            stem: 'Spironolaktoni on kaliumia säästävä diureetti. Tosi vai epätosi?',
+            type: 'single',
+            options: [
+              { label: 'A', text: 'Tosi', correct: true },
+              { label: 'B', text: 'Epätosi', correct: false }
+            ]
+          }
+        ],
+        'P2Y12': [
+          {
+            stem: 'P2Y12-estoa tarvitaan tyypillisesti 12 kk stenttihoidon jälkeen. Tosi vai epätosi?',
+            type: 'single',
+            options: [
+              { label: 'A', text: 'Tosi', correct: true },
+              { label: 'B', text: 'Epätosi', correct: false }
+            ]
+          },
+          {
+            stem: 'Tikagrelo on tehokkaampi kuin klopidogreeli. Tosi vai epätosi?',
+            type: 'single',
+            options: [
+              { label: 'A', text: 'Tosi', correct: true },
+              { label: 'B', text: 'Epätosi', correct: false }
+            ]
+          }
+        ],
+        'Antikoagulantit': [
+          {
+            stem: 'DOAC-valmisteet vaativat säännöllistä INR-seurantaa. Tosi vai epätosi?',
+            type: 'single',
+            options: [
+              { label: 'A', text: 'Tosi', correct: false },
+              { label: 'B', text: 'Epätosi', correct: true }
+            ]
+          },
+          {
+            stem: 'Dabigatraanin antidootti on idarucitsumabi. Tosi vai epätosi?',
+            type: 'single',
+            options: [
+              { label: 'A', text: 'Tosi', correct: true },
+              { label: 'B', text: 'Epätosi', correct: false }
+            ]
+          }
+        ],
+        'Statiinit': [
+          {
+            stem: 'Statiinit voivat aiheuttaa lihasvaivoja. Tosi vai epätosi?',
+            type: 'single',
+            options: [
+              { label: 'A', text: 'Tosi', correct: true },
+              { label: 'B', text: 'Epätosi', correct: false }
+            ]
+          },
+          {
+            stem: 'Statiinit otetaan yleensä illalla. Tosi vai epätosi?',
+            type: 'single',
+            options: [
+              { label: 'A', text: 'Tosi', correct: true },
+              { label: 'B', text: 'Epätosi', correct: false }
+            ]
+          }
+        ]
+      };
+      
+      return drillBank[topic] || [];
+    }
+    
+    function answerDrill(drillIndex, answer) {
+      drillAnswers[drillIndex] = answer;
+      
+      // Get the drill from current page
+      const drillElements = document.querySelectorAll('.drill-question');
+      if (drillElements[drillIndex]) {
+        // Update UI to show selection
+        const options = drillElements[drillIndex].querySelectorAll('.option');
+        options.forEach(opt => {
+          opt.classList.remove('selected');
+          if (opt.textContent.includes(answer + '.')) {
+            opt.classList.add('selected');
+          }
+        });
+      }
+    }
+    
+    function revealAnswers() {
+      if (!currentExam) return;
+      
+      showingResults = true;
+      currentQuestionIndex = 0;
+      showQuestion();
+      
+      // Add navigation to cycle through questions with answers
+      alert('Vastaukset ja perustelut näytetään nyt jokaisessa kysymyksessä. Voit selata kysymyksiä edellinen/seuraava -painikkeilla.');
+    }
+    
+    function generateRationale(question, userAnswers) {
+      const result = gradeQuestion(question, userAnswers);
+      
+      let optionsHTML = question.options.map(opt => {
+        const isCorrect = opt.correct;
+        const isSelected = userAnswers.includes(opt.label);
+        
+        let className = 'option';
+        if (isSelected && isCorrect) className += ' correct';
+        else if (isSelected && !isCorrect) className += ' incorrect';
+        else if (!isSelected && isCorrect) className += ' correct';
+        
+        return `
+          <div class="${className}" style="pointer-events: none;">
+            <label class="option-label">
+              <input type="${question.type === 'single' ? 'radio' : 'checkbox'}" 
+                     ${isSelected ? 'checked' : ''}
+                     disabled>
+              <span class="option-text">
+                <strong>${opt.label}.</strong> ${opt.text}
+                ${isCorrect ? ' ✓' : ''}
+              </span>
+            </label>
+          </div>
+        `;
+      }).join('');
+      
+      return `
+        <div class="rationale">
+          <h4>Pisteet: ${result.clamped.toFixed(2)} / 1.00</h4>
+          <p><strong>Perustelu:</strong> ${question.rationale}</p>
+        </div>
+      `;
+    }
+    
+    // ============================================
+    // UTILITY FUNCTIONS
+    // ============================================
+    
+    function exportCSV() {
+      if (!currentExam) return;
+      
+      let csv = 'Question ID,Difficulty,Type,User Answer,Correct,Score\n';
+      
+      currentExam.questions.forEach(q => {
+        const answers = currentExam.answers[q.id] || [];
+        const result = gradeQuestion(q, answers);
+        const correctLabels = q.options.filter(o => o.correct).map(o => o.label).join(';');
+        
+        csv += `"${q.id}","${q.difficulty}","${q.type}","${answers.join(';')}","${correctLabels}",${result.clamped.toFixed(2)}\n`;
+      });
+      
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `exam-results-${Date.now()}.csv`;
+      a.click();
+    }
+    
+    function resetExam() {
+      if (confirm('Haluatko varmasti aloittaa uuden kokeen? Nykyinen edistyminen menetetään.')) {
+        clearExamState();
+        currentExam = null;
+        currentQuestionIndex = 0;
+        showingResults = false;
+        drillAnswers = {};
+        stopTimer();
+        
+        document.getElementById('finish-btn').classList.add('hidden');
+        showStartScreen();
+      }
+    }
+    
+    function toggleTheme() {
+      document.body.classList.toggle('dark-mode');
+      const isDark = document.body.classList.contains('dark-mode');
+      document.getElementById('theme-toggle').textContent = isDark ? '☀️' : '🌙';
+      localStorage.setItem('darkMode', isDark ? 'true' : 'false');
+    }
+    
+    function toggleInstructions() {
+      const content = document.getElementById('instructions-content');
+      const toggle = document.getElementById('instructions-toggle');
+      
+      content.classList.toggle('collapsed');
+      toggle.textContent = content.classList.contains('collapsed') ? '▶' : '▼';
+    }
+    
+    // ============================================
+    // KEYBOARD SHORTCUTS
+    // ============================================
+    
+    document.addEventListener('keydown', (e) => {
+      if (showingResults || !currentExam) return;
+      
+      const key = e.key.toLowerCase();
+      
+      if (key === 'n') {
+        e.preventDefault();
+        nextQuestion();
+      } else if (key === 'p') {
+        e.preventDefault();
+        previousQuestion();
+      } else if (key === 'm') {
+        e.preventDefault();
+        toggleFlag();
+      } else if (['1', '2', '3', '4', '5'].includes(key)) {
+        e.preventDefault();
+        const question = currentExam.questions[currentQuestionIndex];
+        const optionIndex = parseInt(key) - 1;
+        
+        if (optionIndex < question.options.length) {
+          const label = question.options[optionIndex].label;
+          
+          if (question.type === 'single') {
+            selectOption(label, 'single');
+          } else {
+            toggleOption(label);
+          }
+        }
+      }
+    });
+    
+    // ============================================
+    // INITIALIZATION
+    // ============================================
+    
+    window.addEventListener('load', () => {
+      // Load theme preference
+      const darkMode = localStorage.getItem('darkMode') === 'true';
+      if (darkMode) {
+        document.body.classList.add('dark-mode');
+        document.getElementById('theme-toggle').textContent = '☀️';
+      }
+      
+      showStartScreen();
+    });
+    
+    // Save state before page unload
+    window.addEventListener('beforeunload', () => {
+      if (currentExam && !showingResults) {
+        saveExamState();
+      }
+    });
+  </script>
+</body>
+</html>
+
