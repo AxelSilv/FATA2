@@ -766,7 +766,10 @@
         </label>
         <textarea 
           id="json-paste" 
-          placeholder='[{"id":"1","difficulty":"easy","stem":"Kysymys?","type":"single","options":[{"label":"A","text":"Vastaus","correct":true}],"rationale":"Selitys"}]'
+          placeholder='Liitä kysymyspankki tähän JSON-muodossa. Esim:
+[{"id":"1","difficulty":"easy","stem":"Kysymys?","type":"single","options":[{"label":"A","text":"Vastaus","correct":true}],"rationale":"Selitys"}]
+
+Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheitä.'
         ></textarea>
         <button class="btn" onclick="loadFromPaste()" style="margin-top: 10px;">
           📋 Lataa liitetty JSON
@@ -5405,10 +5408,16 @@
         return false;
       }
       
-      // Validoi kysymykset
+      // Validoi ja normalisoi kysymykset
       const validQuestions = newQuestions.filter(q => {
         return q.id && q.difficulty && q.stem && q.type && 
                Array.isArray(q.options) && q.options.length > 0 && q.rationale;
+      }).map(q => {
+        // Normalisoi type: "multiple" -> "multi"
+        if (q.type === 'multiple') {
+          q.type = 'multi';
+        }
+        return q;
       });
       
       if (validQuestions.length === 0) {
@@ -5440,21 +5449,86 @@
     
     function loadFromPaste() {
       const textarea = document.getElementById('json-paste');
-      const text = textarea.value.trim();
+      let text = textarea.value.trim();
       
       if (!text) {
         alert('Liitä JSON-kysymyspankki tekstikenttään.');
         return;
       }
       
+      // Try to fix common JSON issues
       try {
+        // Remove extra opening brackets at the start
+        while (text.startsWith('[[')) {
+          text = text.substring(1);
+        }
+        
+        // Remove extra closing brackets at the end
+        while (text.endsWith(']]')) {
+          text = text.substring(0, text.length - 1);
+        }
+        
+        // Fix case where there are two separate arrays concatenated
+        // Like: [...][...] -> [...]
+        if (text.includes('][')) {
+          // Split by ][ and merge into one array
+          const parts = text.split(/\]\s*\[/);
+          if (parts.length > 1) {
+            // Remove leading [ from first part if exists
+            parts[0] = parts[0].replace(/^\[/, '');
+            // Remove trailing ] from last part if exists
+            parts[parts.length - 1] = parts[parts.length - 1].replace(/\]$/, '');
+            // Join all parts with comma
+            text = '[' + parts.join(',') + ']';
+          }
+        }
+        
+        // Try to parse
         const questions = JSON.parse(text);
+        
         if (updateQuestionBank(questions)) {
           alert(`✅ Ladattu ${QUESTION_BANK.length} kysymystä!`);
           textarea.value = '';
         }
       } catch (e) {
-        alert('Virheellinen JSON-muoto. Tarkista syntaksi.\\n\\n' + e.message);
+        // Try one more time with a more aggressive fix
+        try {
+          // Extract all question objects by finding balanced braces
+          const questions = [];
+          let depth = 0;
+          let start = -1;
+          
+          for (let i = 0; i < text.length; i++) {
+            if (text[i] === '{') {
+              if (depth === 0) start = i;
+              depth++;
+            } else if (text[i] === '}') {
+              depth--;
+              if (depth === 0 && start !== -1) {
+                const objText = text.substring(start, i + 1);
+                try {
+                  const obj = JSON.parse(objText);
+                  if (obj.id && obj.stem && obj.type) {
+                    questions.push(obj);
+                  }
+                } catch (err) {
+                  // Skip invalid objects
+                }
+                start = -1;
+              }
+            }
+          }
+          
+          if (questions.length > 0 && updateQuestionBank(questions)) {
+            alert(`✅ Ladattu ${QUESTION_BANK.length} kysymystä!\\n(Korjattu automaattisesti muotoiluvirheitä)`);
+            textarea.value = '';
+            return;
+          }
+        } catch (err2) {
+          // Fallback failed too
+        }
+        
+        alert('Virheellinen JSON-muoto. Tarkista syntaksi.\\n\\nVinkki: Varmista että teksti alkaa [ ja päättyy ]\\n\\nVirhe: ' + e.message);
       }
     }
     
