@@ -267,6 +267,30 @@
       border-color: var(--warning);
     }
     
+    .question-number.correct-answered {
+      background: #d1e7dd;
+      border-color: var(--success);
+      color: #155724;
+      font-weight: 700;
+    }
+    
+    .question-number.incorrect-answered {
+      background: #f8d7da;
+      border-color: var(--danger);
+      color: #721c24;
+      font-weight: 700;
+    }
+    
+    body.dark-mode .question-number.correct-answered {
+      background: #1e4d2b;
+      color: #a3cfbb;
+    }
+    
+    body.dark-mode .question-number.incorrect-answered {
+      background: #5c1f1f;
+      color: #f5c2c7;
+    }
+    
     .question-number.current {
       border-color: var(--accent);
       border-width: 3px;
@@ -368,6 +392,17 @@
     .option.incorrect {
       background: #f8d7da;
       border-color: var(--danger);
+    }
+    
+    .option.show-correct {
+      background: #cfe2ff;
+      border-color: var(--accent);
+      border-width: 2px;
+      border-style: dashed;
+    }
+    
+    body.dark-mode .option.show-correct {
+      background: #1e3a5f;
     }
     
     .option input[type="radio"],
@@ -5651,12 +5686,22 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
       
       const allSelected = [...selectedEasy, ...selectedMedium, ...selectedHard];
       
+      // Käytä Setiä varmistaaksemme että samaa kysymystä ei arvota kahteen kertaan
+      const usedIds = new Set(allSelected.map(q => q.id));
+      
       // Jos ei ole 50 kysymystä, täytä loput kaikista saatavilla olevista
       if (allSelected.length < 50) {
-        const remaining = QUESTION_BANK.filter(q => !allSelected.includes(q));
+        const remaining = QUESTION_BANK.filter(q => !usedIds.has(q.id));
         const needed = 50 - allSelected.length;
         const additional = shuffle(remaining, rng).slice(0, needed);
-        allSelected.push(...additional);
+        
+        // Varmista että lisättyihin kysymyksiin ei tule duplikaatteja
+        for (const q of additional) {
+          if (!usedIds.has(q.id)) {
+            usedIds.add(q.id);
+            allSelected.push(q);
+          }
+        }
       }
       
       return shuffle(allSelected, rng);
@@ -5701,7 +5746,8 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
       const state = {
         seed: currentExam.seed,
         answers: currentExam.answers,
-        flagged: currentExam.flagged,
+        flagged: Array.from(currentExam.flagged),
+        submitted: Array.from(currentExam.submitted),
         timeRemaining: timeRemaining,
         currentQuestionIndex: currentQuestionIndex
       };
@@ -5788,6 +5834,7 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
         questions: questions,
         answers: {},
         flagged: new Set(),
+        submitted: new Set(),
         startTime: Date.now()
       };
       
@@ -5842,6 +5889,7 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
         questions: questions,
         answers: saved.answers || {},
         flagged: new Set(saved.flagged || []),
+        submitted: new Set(saved.submitted || []),
         startTime: Date.now() - ((115 * 60 - saved.timeRemaining) * 1000)
       };
       
@@ -5865,36 +5913,69 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
       
       const userAnswers = currentExam.answers[question.id] || [];
       const isFlagged = currentExam.flagged.has(question.id);
+      const isSubmitted = currentExam.submitted.has(question.id);
+      
+      // Get the result to determine if answer is correct
+      const result = gradeQuestion(question, userAnswers);
+      const isCorrect = result.clamped >= 1.0;
       
       let optionsHTML = '';
       
-      if (question.type === 'single') {
-        optionsHTML = question.options.map(opt => `
-          <div class="option ${userAnswers.includes(opt.label) ? 'selected' : ''}" 
-               onclick="selectOption('${opt.label}', 'single')">
-            <label class="option-label">
-              <input type="radio" 
-                     name="answer" 
-                     value="${opt.label}" 
-                     ${userAnswers.includes(opt.label) ? 'checked' : ''}
-                     onchange="selectOption('${opt.label}', 'single')">
-              <span class="option-text"><strong>${opt.label}.</strong> ${opt.text}</span>
-            </label>
-          </div>
-        `).join('');
+      if (isSubmitted) {
+        // Show results with correct/incorrect indicators
+        optionsHTML = question.options.map(opt => {
+          const isCorrect = opt.correct;
+          const isSelected = userAnswers.includes(opt.label);
+          
+          let className = 'option';
+          if (isSelected && isCorrect) className += ' correct';
+          else if (isSelected && !isCorrect) className += ' incorrect';
+          else if (!isSelected && isCorrect) className += ' show-correct';
+          
+          return `
+            <div class="${className}" style="pointer-events: none;">
+              <label class="option-label">
+                <input type="${question.type === 'single' ? 'radio' : 'checkbox'}" 
+                       ${isSelected ? 'checked' : ''}
+                       disabled>
+                <span class="option-text">
+                  <strong>${opt.label}.</strong> ${opt.text}
+                  ${isCorrect ? ' ✓' : ''}
+                </span>
+              </label>
+            </div>
+          `;
+        }).join('');
       } else {
-        optionsHTML = question.options.map(opt => `
-          <div class="option ${userAnswers.includes(opt.label) ? 'selected' : ''}" 
-               onclick="toggleOption('${opt.label}')">
-            <label class="option-label">
-              <input type="checkbox" 
-                     value="${opt.label}" 
-                     ${userAnswers.includes(opt.label) ? 'checked' : ''}
-                     onchange="toggleOption('${opt.label}')">
-              <span class="option-text"><strong>${opt.label}.</strong> ${opt.text}</span>
-            </label>
-          </div>
-        `).join('');
+        // Normal interactive mode
+        if (question.type === 'single') {
+          optionsHTML = question.options.map(opt => `
+            <div class="option ${userAnswers.includes(opt.label) ? 'selected' : ''}" 
+                 onclick="selectOption('${opt.label}', 'single')">
+              <label class="option-label">
+                <input type="radio" 
+                       name="answer" 
+                       value="${opt.label}" 
+                       ${userAnswers.includes(opt.label) ? 'checked' : ''}
+                       onchange="selectOption('${opt.label}', 'single')">
+                <span class="option-text"><strong>${opt.label}.</strong> ${opt.text}</span>
+              </label>
+            </div>
+          `).join('');
+        } else {
+          optionsHTML = question.options.map(opt => `
+            <div class="option ${userAnswers.includes(opt.label) ? 'selected' : ''}" 
+                 onclick="toggleOption('${opt.label}')">
+              <label class="option-label">
+                <input type="checkbox" 
+                       value="${opt.label}" 
+                       ${userAnswers.includes(opt.label) ? 'checked' : ''}
+                       onchange="toggleOption('${opt.label}')">
+                <span class="option-text"><strong>${opt.label}.</strong> ${opt.text}</span>
+              </label>
+            </div>
+          `).join('');
+        }
       }
       
       app.innerHTML = `
@@ -5909,6 +5990,7 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
                     ${question.type === 'single' ? '4 vaihtoehtoa - valitse 1' : '5 vaihtoehtoa - valitse kaikki oikeat'}
                   </span>
                   ${isFlagged ? '<span class="badge badge-warning">🚩 Merkitty</span>' : ''}
+                  ${isSubmitted ? (isCorrect ? '<span class="badge" style="background: #4caf50;">✓ Oikein</span>' : '<span class="badge" style="background: #f44336;">✗ Väärin</span>') : ''}
                 </div>
               </div>
             </div>
@@ -5919,7 +6001,7 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
               ${optionsHTML}
             </div>
             
-            ${showingResults ? generateRationale(question, userAnswers) : ''}
+            ${isSubmitted ? generateRationale(question, userAnswers) : ''}
             
             <div class="navigation">
               <div class="nav-buttons">
@@ -5928,12 +6010,17 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
                         ${isFirst ? 'disabled' : ''}>
                   ← Edellinen
                 </button>
+                ${!isSubmitted ? `
+                  <button class="btn btn-success" onclick="submitAnswer()">
+                    ✓ Vahvista vastaus
+                  </button>
+                ` : ''}
                 <button class="btn" 
                         onclick="nextQuestion()">
                   ${isLast ? 'Viimeinen kysymys' : 'Seuraava →'}
                 </button>
               </div>
-              <button class="btn btn-warning" onclick="toggleFlag()">
+              <button class="btn btn-warning" onclick="toggleFlag()" ${isSubmitted ? 'disabled' : ''}>
                 ${isFlagged ? '✓ Merkitty' : '🚩 Merkitse'}
               </button>
             </div>
@@ -5954,6 +6041,14 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
                 <span>Vastattu</span>
               </div>
               <div style="display: flex; align-items: center; gap: 8px; margin: 5px 0;">
+                <div style="width: 20px; height: 20px; background: #d1e7dd; border: 2px solid var(--success); border-radius: 4px;"></div>
+                <span>Oikein</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px; margin: 5px 0;">
+                <div style="width: 20px; height: 20px; background: #f8d7da; border: 2px solid var(--danger); border-radius: 4px;"></div>
+                <span>Väärin</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px; margin: 5px 0;">
                 <div style="width: 20px; height: 20px; background: var(--flagged); border-radius: 4px;"></div>
                 <span>Merkitty</span>
               </div>
@@ -5971,12 +6066,28 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
       return currentExam.questions.map((q, idx) => {
         const answered = currentExam.answers[q.id] && currentExam.answers[q.id].length > 0;
         const flagged = currentExam.flagged.has(q.id);
+        const isSubmitted = currentExam.submitted.has(q.id);
         const isCurrent = idx === currentQuestionIndex;
         
         let classes = ['question-number'];
-        if (flagged) classes.push('flagged');
-        else if (answered) classes.push('answered');
-        else classes.push('unanswered');
+        if (isSubmitted) {
+          // Check if answer was correct
+          const userAnswers = currentExam.answers[q.id] || [];
+          const result = gradeQuestion(q, userAnswers);
+          const isCorrect = result.clamped >= 1.0;
+          
+          if (isCorrect) {
+            classes.push('correct-answered');
+          } else {
+            classes.push('incorrect-answered');
+          }
+        } else if (flagged) {
+          classes.push('flagged');
+        } else if (answered) {
+          classes.push('answered');
+        } else {
+          classes.push('unanswered');
+        }
         
         if (isCurrent) classes.push('current');
         
@@ -5984,10 +6095,30 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
       }).join('');
     }
     
+    function submitAnswer() {
+      if (!currentExam || showingResults) return;
+      
+      const question = currentExam.questions[currentQuestionIndex];
+      const userAnswers = currentExam.answers[question.id] || [];
+      
+      if (userAnswers.length === 0) {
+        alert('Valitse vastaus ennen vahvistusta!');
+        return;
+      }
+      
+      currentExam.submitted.add(question.id);
+      saveExamState();
+      showQuestion();
+    }
+    
     function selectOption(label, type) {
       if (!currentExam || showingResults) return;
       
       const question = currentExam.questions[currentQuestionIndex];
+      
+      // Prevent changes if submitted
+      if (currentExam.submitted.has(question.id)) return;
+      
       currentExam.answers[question.id] = [label];
       
       saveExamState();
@@ -5998,6 +6129,10 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
       if (!currentExam || showingResults) return;
       
       const question = currentExam.questions[currentQuestionIndex];
+      
+      // Prevent changes if submitted
+      if (currentExam.submitted.has(question.id)) return;
+      
       const current = currentExam.answers[question.id] || [];
       
       if (current.includes(label)) {
@@ -6483,9 +6618,17 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
         `;
       }).join('');
       
+      // Get correct answer labels
+      const correctLabels = question.options.filter(o => o.correct).map(o => o.label);
+      const correctAnswersText = correctLabels.length === 1 
+        ? `Oikea vastaus on: <strong>${correctLabels[0]}</strong>` 
+        : `Oikeat vastaukset ovat: <strong>${correctLabels.join(', ')}</strong>`;
+      
       return `
         <div class="rationale">
           <h4>Pisteet: ${result.clamped.toFixed(2)} / 1.00</h4>
+          <p><strong>Oikeat vastaukset:</strong></p>
+          <p>${correctAnswersText}</p>
           <p><strong>Perustelu:</strong> ${question.rationale}</p>
         </div>
       `;
