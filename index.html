@@ -877,7 +877,8 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
         "correct": false
       }
     ],
-    "rationale": "ACE-estäjät estävät bradykiniinin hajoamista → yskä/angioedeema mahdollisia."
+    "rationale": "ACE-estäjät estävät bradykiniinin hajoamista → yskä/angioedeema mahdollisia.",
+    "explanation": "ACE-estäjät (esim. enalapriili, lisinopriili) estävät angiotensin-konvertaasientsyymin, mikä johtaa aldosteronin ja angiotensin II:n vähenemiseen. Lisäksi ne lisäävät bradykiniinin pitoisuutta, mikä aiheuttaa kuivan yskän haittavaikutuksen noin 5-10% potilaista."
   },
   {
     "id": "6909f8d9-6b82-457e-9fca-407d4bfecb80",
@@ -6624,11 +6625,19 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
         ? `Oikea vastaus on: <strong>${correctLabels[0]}</strong>` 
         : `Oikeat vastaukset ovat: <strong>${correctLabels.join(', ')}</strong>`;
       
+      let explanationHTML = '';
+      if (question.explanation) {
+        explanationHTML = `
+          <p><strong>Selitys:</strong> ${question.explanation}</p>
+        `;
+      }
+      
       return `
         <div class="rationale">
           <h4>Pisteet: ${result.clamped.toFixed(2)} / 1.00</h4>
           <p><strong>Oikeat vastaukset:</strong></p>
           <p>${correctAnswersText}</p>
+          ${explanationHTML}
           <p><strong>Perustelu:</strong> ${question.rationale}</p>
         </div>
       `;
