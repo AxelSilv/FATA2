@@ -5520,7 +5520,18 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
         }
         
         // Try to parse
-        const questions = JSON.parse(text);
+        const parsed = JSON.parse(text);
+        
+        // Handle both formats: array directly or wrapped in object with QUESTION_BANK key
+        let questions;
+        if (Array.isArray(parsed)) {
+          questions = parsed;
+        } else if (parsed && parsed.QUESTION_BANK && Array.isArray(parsed.QUESTION_BANK)) {
+          questions = parsed.QUESTION_BANK;
+        } else {
+          alert('Virheellinen formaatti. Tiedoston tulee sisältää joko kysymystaulukko tai objektin "QUESTION_BANK"-avain.');
+          return;
+        }
         
         if (updateQuestionBank(questions)) {
           alert(`✅ Ladattu ${QUESTION_BANK.length} kysymystä!`);
@@ -5576,7 +5587,19 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
         
         if (file.name.endsWith('.json')) {
           try {
-            const questions = JSON.parse(content);
+            const parsed = JSON.parse(content);
+            
+            // Handle both formats: array directly or wrapped in object with QUESTION_BANK key
+            let questions;
+            if (Array.isArray(parsed)) {
+              questions = parsed;
+            } else if (parsed && parsed.QUESTION_BANK && Array.isArray(parsed.QUESTION_BANK)) {
+              questions = parsed.QUESTION_BANK;
+            } else {
+              alert('Virheellinen formaatti. Tiedoston tulee sisältää joko kysymystaulukko tai objektin "QUESTION_BANK"-avain.');
+              return;
+            }
+            
             if (updateQuestionBank(questions)) {
               alert(`✅ Ladattu tiedostosta: ${QUESTION_BANK.length} kysymystä!`);
             }
