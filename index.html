@@ -5447,12 +5447,26 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
       // Validoi ja normalisoi kysymykset
       const validQuestions = newQuestions.filter(q => {
         return q.id && q.difficulty && q.stem && q.type && 
-               Array.isArray(q.options) && q.options.length > 0 && q.rationale;
+               Array.isArray(q.options) && q.options.length > 0;
       }).map(q => {
         // Normalisoi type: "multiple" -> "multi"
         if (q.type === 'multiple') {
           q.type = 'multi';
         }
+        
+        // Normalisoi options: is_correct -> correct
+        q.options = q.options.map(opt => {
+          if (opt.hasOwnProperty('is_correct') && !opt.hasOwnProperty('correct')) {
+            opt.correct = opt.is_correct;
+          }
+          return opt;
+        });
+        
+        // Aseta tyhjä rationale jos puuttuu
+        if (!q.rationale) {
+          q.rationale = '';
+        }
+        
         return q;
       });
       
