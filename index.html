@@ -5742,7 +5742,32 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
         }
       }
       
-      return shuffle(allSelected, rng);
+      // Sekoita jokaisen kysymyksen vaihtoehdot deterministisesti
+      const questionsWithShuffledOptions = allSelected.map(q => {
+        // Luo seed kysymyksen ID:stä
+        const questionSeed = q.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        const optionRng = seededRandom(questionSeed);
+        
+        // Sekoita vaihtoehdot
+        const shuffledOptions = [...q.options];
+        for (let i = shuffledOptions.length - 1; i > 0; i--) {
+          const j = Math.floor(optionRng() * (i + 1));
+          [shuffledOptions[i], shuffledOptions[j]] = [shuffledOptions[j], shuffledOptions[i]];
+        }
+        
+        // Aseta uudet labelit A, B, C, D, E järjestyksessä
+        const labels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+        shuffledOptions.forEach((opt, idx) => {
+          opt.label = labels[idx];
+        });
+        
+        return {
+          ...q,
+          options: shuffledOptions
+        };
+      });
+      
+      return shuffle(questionsWithShuffledOptions, rng);
     }
     
     // ============================================
