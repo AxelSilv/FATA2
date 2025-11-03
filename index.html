@@ -5533,21 +5533,82 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
           }
         }
         
-        // Try to parse
-        const parsed = JSON.parse(text);
+        // Try to parse - support multiple JSON objects/arrays concatenated
+        let allQuestions = [];
         
-        // Handle both formats: array directly or wrapped in object with QUESTION_BANK key
-        let questions;
-        if (Array.isArray(parsed)) {
-          questions = parsed;
-        } else if (parsed && parsed.QUESTION_BANK && Array.isArray(parsed.QUESTION_BANK)) {
-          questions = parsed.QUESTION_BANK;
-        } else {
-          alert('Virheellinen formaatti. Tiedoston tulee sisältää joko kysymystaulukko tai objektin "QUESTION_BANK"-avain.');
+        // Split by newlines and try to parse each potential JSON block
+        const jsonBlocks = [];
+        let currentBlock = '';
+        let braceDepth = 0;
+        let inString = false;
+        let escapeNext = false;
+        
+        for (let i = 0; i < text.length; i++) {
+          const char = text[i];
+          
+          if (escapeNext) {
+            currentBlock += char;
+            escapeNext = false;
+            continue;
+          }
+          
+          if (char === '\\') {
+            escapeNext = true;
+            currentBlock += char;
+            continue;
+          }
+          
+          if (char === '"' && !escapeNext) {
+            inString = !inString;
+          }
+          
+          currentBlock += char;
+          
+          if (!inString) {
+            if (char === '{' || char === '[') {
+              braceDepth++;
+            } else if (char === '}' || char === ']') {
+              braceDepth--;
+              if (braceDepth === 0 && currentBlock.trim()) {
+                jsonBlocks.push(currentBlock.trim());
+                currentBlock = '';
+              }
+            }
+          }
+        }
+        
+        if (currentBlock.trim() && braceDepth === 0) {
+          jsonBlocks.push(currentBlock.trim());
+        }
+        
+        // Parse each JSON block
+        for (const block of jsonBlocks) {
+          try {
+            const parsed = JSON.parse(block);
+            
+            // Handle different formats
+            if (Array.isArray(parsed)) {
+              allQuestions.push(...parsed);
+            } else if (parsed && parsed.QUESTION_BANK && Array.isArray(parsed.QUESTION_BANK)) {
+              allQuestions.push(...parsed.QUESTION_BANK);
+            } else if (parsed && parsed.questions && Array.isArray(parsed.questions)) {
+              // Handle {append: true, questions: [...]} format
+              allQuestions.push(...parsed.questions);
+            } else if (parsed && typeof parsed === 'object') {
+              // Single question object
+              allQuestions.push(parsed);
+            }
+          } catch (e) {
+            console.warn('Skipping invalid JSON block:', e);
+          }
+        }
+        
+        if (allQuestions.length === 0) {
+          alert('Virheellinen formaatti. Ei voitu ladata yhtään kysymystä.');
           return;
         }
         
-        if (updateQuestionBank(questions)) {
+        if (updateQuestionBank(allQuestions)) {
           alert(`✅ Ladattu ${QUESTION_BANK.length} kysymystä!`);
           textarea.value = '';
         }
@@ -5601,20 +5662,78 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
         
         if (file.name.endsWith('.json')) {
           try {
-            const parsed = JSON.parse(content);
+            let allQuestions = [];
             
-            // Handle both formats: array directly or wrapped in object with QUESTION_BANK key
-            let questions;
-            if (Array.isArray(parsed)) {
-              questions = parsed;
-            } else if (parsed && parsed.QUESTION_BANK && Array.isArray(parsed.QUESTION_BANK)) {
-              questions = parsed.QUESTION_BANK;
-            } else {
-              alert('Virheellinen formaatti. Tiedoston tulee sisältää joko kysymystaulukko tai objektin "QUESTION_BANK"-avain.');
+            // Split and parse multiple JSON blocks
+            const jsonBlocks = [];
+            let currentBlock = '';
+            let braceDepth = 0;
+            let inString = false;
+            let escapeNext = false;
+            
+            for (let i = 0; i < content.length; i++) {
+              const char = content[i];
+              
+              if (escapeNext) {
+                currentBlock += char;
+                escapeNext = false;
+                continue;
+              }
+              
+              if (char === '\\') {
+                escapeNext = true;
+                currentBlock += char;
+                continue;
+              }
+              
+              if (char === '"' && !escapeNext) {
+                inString = !inString;
+              }
+              
+              currentBlock += char;
+              
+              if (!inString) {
+                if (char === '{' || char === '[') {
+                  braceDepth++;
+                } else if (char === '}' || char === ']') {
+                  braceDepth--;
+                  if (braceDepth === 0 && currentBlock.trim()) {
+                    jsonBlocks.push(currentBlock.trim());
+                    currentBlock = '';
+                  }
+                }
+              }
+            }
+            
+            if (currentBlock.trim() && braceDepth === 0) {
+              jsonBlocks.push(currentBlock.trim());
+            }
+            
+            // Parse each JSON block
+            for (const block of jsonBlocks) {
+              try {
+                const parsed = JSON.parse(block);
+                
+                if (Array.isArray(parsed)) {
+                  allQuestions.push(...parsed);
+                } else if (parsed && parsed.QUESTION_BANK && Array.isArray(parsed.QUESTION_BANK)) {
+                  allQuestions.push(...parsed.QUESTION_BANK);
+                } else if (parsed && parsed.questions && Array.isArray(parsed.questions)) {
+                  allQuestions.push(...parsed.questions);
+                } else if (parsed && typeof parsed === 'object') {
+                  allQuestions.push(parsed);
+                }
+              } catch (e) {
+                console.warn('Skipping invalid JSON block:', e);
+              }
+            }
+            
+            if (allQuestions.length === 0) {
+              alert('Virheellinen formaatti. Ei voitu ladata yhtään kysymystä.');
               return;
             }
             
-            if (updateQuestionBank(questions)) {
+            if (updateQuestionBank(allQuestions)) {
               alert(`✅ Ladattu tiedostosta: ${QUESTION_BANK.length} kysymystä!`);
             }
           } catch (error) {
