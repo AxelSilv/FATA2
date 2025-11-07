@@ -5435,6 +5435,20 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
     let drillAnswers = {};
     
     // ============================================
+    // HTML ESCAPOINTI
+    // ============================================
+    
+    function escapeHtml(unsafe) {
+      if (!unsafe) return '';
+      return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+    
+    // ============================================
     // KYSYMYSPANKIN LATAUS
     // ============================================
     
@@ -6121,7 +6135,7 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
                        ${isSelected ? 'checked' : ''}
                        disabled>
                 <span class="option-text">
-                  <strong>${opt.label}.</strong> ${opt.text}
+                  <strong>${opt.label}.</strong> ${escapeHtml(opt.text)}
                   ${isCorrect ? ' ✓' : ''}
                 </span>
               </label>
@@ -6140,7 +6154,7 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
                        value="${opt.label}" 
                        ${userAnswers.includes(opt.label) ? 'checked' : ''}
                        onchange="selectOption('${opt.label}', 'single')">
-                <span class="option-text"><strong>${opt.label}.</strong> ${opt.text}</span>
+                <span class="option-text"><strong>${opt.label}.</strong> ${escapeHtml(opt.text)}</span>
               </label>
             </div>
           `).join('');
@@ -6153,7 +6167,7 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
                        value="${opt.label}" 
                        ${userAnswers.includes(opt.label) ? 'checked' : ''}
                        onchange="toggleOption('${opt.label}')">
-                <span class="option-text"><strong>${opt.label}.</strong> ${opt.text}</span>
+                <span class="option-text"><strong>${opt.label}.</strong> ${escapeHtml(opt.text)}</span>
               </label>
             </div>
           `).join('');
@@ -6177,7 +6191,7 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
               </div>
             </div>
             
-            <div class="question-stem">${question.stem}</div>
+            <div class="question-stem">${escapeHtml(question.stem)}</div>
             
             <div class="options">
               ${optionsHTML}
@@ -6473,7 +6487,7 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
             </p>
             ${miniDrills.map((drill, idx) => `
               <div class="drill-question">
-                <strong>Driilli ${idx + 1}:</strong> ${drill.stem}
+                <strong>Driilli ${idx + 1}:</strong> ${escapeHtml(drill.stem)}
                 <div class="drill-options">
                   ${drill.options.map(opt => `
                     <div class="option ${drillAnswers[idx] === opt.label ? 'selected' : ''}" 
@@ -6482,7 +6496,7 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
                         <input type="${drill.type === 'single' ? 'radio' : 'checkbox'}" 
                                name="drill-${idx}"
                                ${drillAnswers[idx] === opt.label ? 'checked' : ''}>
-                        <span class="option-text"><strong>${opt.label}.</strong> ${opt.text}</span>
+                        <span class="option-text"><strong>${opt.label}.</strong> ${escapeHtml(opt.text)}</span>
                       </label>
                     </div>
                   `).join('')}
@@ -6792,7 +6806,7 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
                      ${isSelected ? 'checked' : ''}
                      disabled>
               <span class="option-text">
-                <strong>${opt.label}.</strong> ${opt.text}
+                <strong>${opt.label}.</strong> ${escapeHtml(opt.text)}
                 ${isCorrect ? ' ✓' : ''}
               </span>
             </label>
@@ -6809,7 +6823,7 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
       let explanationHTML = '';
       if (question.explanation) {
         explanationHTML = `
-          <p><strong>Selitys:</strong> ${question.explanation}</p>
+          <p><strong>Selitys:</strong> ${escapeHtml(question.explanation)}</p>
         `;
       }
       
@@ -6819,7 +6833,7 @@ Tukee myös "type":"multiple" ja korjaa automaattisesti pieniä muotoiluvirheit�
           <p><strong>Oikeat vastaukset:</strong></p>
           <p>${correctAnswersText}</p>
           ${explanationHTML}
-          <p><strong>Perustelu:</strong> ${question.rationale}</p>
+          <p><strong>Perustelu:</strong> ${escapeHtml(question.rationale)}</p>
         </div>
       `;
     }
